@@ -100,9 +100,9 @@ function createTrip(name = "Новая поездка", countryInfo = null) {
   const id = "trip_" + Date.now();
 
   const currency = countryInfo?.currency || "EUR";
-  const displayName =
+const displayName =
     name ||
-    (countryInfo ? `${countryInfo.flag} ${countryInfo.name} Trip` : "Новая поездка");
+    (countryInfo ? `${countryInfo.name} Trip` : "Новая поездка");
 
   state.trips[id] = {
     id,

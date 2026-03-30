@@ -166,3 +166,19 @@ header {
     width: 100%;
     border-radius: 10px;
 }
+.export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.export-buttons button {
+    flex: 1;
+    padding: 10px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}

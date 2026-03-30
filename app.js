@@ -403,6 +403,45 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 // ===============================
+// ===============================
+// 11. Share API
+// ===============================
+
+async function shareTrip() {
+  if (!state.activeTrip) return;
+
+  const trip = state.trips[state.activeTrip];
+
+  // Текст для отправки
+  let text = `🚗 TravelCar Trip: ${trip.name}\n`;
+  text += `Валюта: ${trip.currency}\n`;
+  text += `Всего расходов: ${trip.expenses.length}\n\n`;
+
+  let total = 0;
+
+  trip.expenses.forEach(exp => {
+    total += exp.amount;
+    text += `• ${exp.title} — ${exp.amount} ${trip.currency}\n`;
+    if (exp.location) text += `  📍 ${exp.location}\n`;
+  });
+
+  text += `\nИтого: ${total} ${trip.currency}`;
+
+  // Проверяем поддержку Share API
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "TravelCar Trip",
+        text
+      });
+    } catch (e) {
+      console.log("Share canceled");
+    }
+  } else {
+    alert("Ваш браузер не поддерживает Share API");
+  }
+}
+document.getElementById("shareTrip").addEventListener("click", shareTrip);
 // 6. Модалка расхода
 // ===============================
 

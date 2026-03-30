@@ -3,90 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TravelCar 2.0</title>
-
-    <!-- Подключение стилей -->
+    <title>TravelCar 2.0+</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- ========================= -->
-    <!--        ШАПКА + ПОЕЗДКИ   -->
-    <!-- ========================= -->
+<header>
+    <h1>TRAVEL.CAR</h1>
 
-    <header>
-        <h1>TRAVEL.CAR</h1>
-
-        <div class="trip-selector">
-            <select id="tripSelect"></select>
-            <button id="newTripBtn">+</button>
-        </div>
-    </header>
-
-
-    <!-- ========================= -->
-    <!--     ФОРМА ДОБАВЛЕНИЯ      -->
-    <!-- ========================= -->
-
-    <section class="add-expense">
-        <h2>Добавить расход</h2>
-
-        <input type="text" id="expTitle" placeholder="Название">
-        <input type="number" id="expAmount" placeholder="Сумма">
-        <select id="expCategory">
-            <option value="fuel">Топливо</option>
-            <option value="food">Еда</option>
-            <option value="hotel">Жильё</option>
-            <option value="toll">Платные дороги</option>
-            <option value="parking">Парковка</option>
-            <option value="other">Другое</option>
-        </select>
-
-        <button id="addExpenseBtn">Добавить</button>
-    </section>
-
-
-    <!-- ========================= -->
-    <!--     СПИСОК РАСХОДОВ       -->
-    <!-- ========================= -->
-
-    <section class="expense-list">
-        <h2>Расходы</h2>
-        <div class="export-buttons">
-    <button id="exportCSV">Экспорт CSV</button>
-    <button id="exportJSON">Экспорт JSON</button>
-    <button id="exportPDF">Экспорт PDF</button>
-    <button id="shareTrip">Поделиться</button>
-</div>
-        <div id="expenseList"></div>
-    </section>
-
-
-    <!-- ========================= -->
-    <!--     МОДАЛКА РАСХОДА       -->
-    <!-- ========================= -->
-
-    <div id="expenseModal" class="modal hidden">
-        <div class="modal-content">
-            <span id="closeModal" class="close">&times;</span>
-
-            <h3 id="modalTitle"></h3>
-            <p><strong>Сумма:</strong> <span id="modalAmount"></span></p>
-            <p><strong>Категория:</strong> <span id="modalCategory"></span></p>
-            <p><strong>Дата:</strong> <span id="modalDate"></span></p>
-            <p><strong>Место:</strong> <span id="modalLocation"></span></p>
-
-            <div id="modalMap" class="map"></div>
-        </div>
+    <div class="theme-toggle">
+        <button id="toggleTheme">🌓</button>
     </div>
 
+    <div class="trip-selector">
+        <select id="tripSelect"></select>
+        <button id="newTripBtn">+</button>
+    </div>
+</header>
 
-    <!-- ========================= -->
-    <!--     ПОДКЛЮЧЕНИЕ JS        -->
-    <!-- ========================= -->
+<section class="add-expense">
+    <h2>Добавить расход</h2>
 
-    <script src="app.js"></script>
+    <input type="text" id="expTitle" placeholder="Название">
+    <input type="number" id="expAmount" placeholder="Сумма">
+    <select id="expCategory">
+        <option value="fuel">Топливо</option>
+        <option value="food">Еда</option>
+        <option value="hotel">Жильё</option>
+        <option value="toll">Платные дороги</option>
+        <option value="parking">Парковка</option>
+        <option value="other">Другое</option>
+    </select>
+
+    <div class="row">
+        <input type="number" id="tripBudget" placeholder="Бюджет поездки">
+        <button id="saveBudgetBtn">💰</button>
+    </div>
+
+    <div class="row">
+        <input type="file" id="expPhoto" accept="image/*">
+        <button id="voiceInputBtn">🎤</button>
+    </div>
+
+    <button id="addExpenseBtn">Добавить</button>
+</section>
+
+<section class="expense-list">
+    <h2>Расходы</h2>
+
+    <div class="export-buttons">
+        <button id="exportCSV">Экспорт CSV</button>
+        <button id="exportJSON">Экспорт JSON</button>
+        <button id="exportPDF">Экспорт PDF</button>
+        <button id="shareTrip">Поделиться</button>
+    </div>
+
+    <div class="backup-row">
+        <button id="exportAllBtn">Бэкап всех данных</button>
+        <label class="import-label">
+            Импорт
+            <input type="file" id="importAllInput" accept="application/json">
+        </label>
+    </div>
+
+    <div id="expenseList"></div>
+</section>
+
+<section class="analytics">
+    <h2>Аналитика</h2>
+    <div class="analytics-row">
+        <canvas id="categoryChart"></canvas>
+        <canvas id="dailyChart"></canvas>
+    </div>
+    <p id="baseCurrencySummary"></p>
+</section>
+
+<section class="map-section">
+    <h2>Карта расходов</h2>
+    <div id="tripMap"></div>
+</section>
+
+<div id="expenseModal" class="modal hidden">
+    <div class="modal-content">
+        <span id="closeModal" class="close">&times;</span>
+
+        <h3 id="modalTitle"></h3>
+        <p><strong>Сумма:</strong> <span id="modalAmount"></span></p>
+        <p><strong>Категория:</strong> <span id="modalCategory"></span></p>
+        <p><strong>Дата:</strong> <span id="modalDate"></span></p>
+        <p><strong>Место:</strong> <span id="modalLocation"></span></p>
+
+        <div id="modalPhotoWrapper">
+            <img id="modalPhoto" class="modal-photo" alt="">
+        </div>
+
+        <div id="modalMap" class="map"></div>
+    </div>
+</div>
+
+<!-- Библиотеки -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="app.js"></script>
 </body>
 </html>

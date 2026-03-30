@@ -282,7 +282,7 @@ function renderExpenses() {
 
     div.innerHTML = `
       <strong>${exp.title}</strong>
-      <span>${exp.amount} ${trip.currency}</span>
+      <span><strong>${exp.amount}</strong> ${trip.currency}</span>
       <small>${new Date(exp.date).toLocaleString()}</small>
       <small>${locationText}</small>
     `;

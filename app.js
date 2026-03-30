@@ -4,7 +4,7 @@ function fmt(amount) {
 }
 
 // Хранилище
-const STORAGE_KEY = "travel_car_v1";
+const STORAGE_KEY = "travel_car_v2";
 
 let state = {
   tripName: "Поездка 1",
@@ -47,6 +47,9 @@ const addExpenseBtn = document.getElementById("addExpenseBtn");
 const closeModalBtn = document.getElementById("closeModal");
 const cancelExpenseBtn = document.getElementById("cancelExpense");
 const saveExpenseBtn = document.getElementById("saveExpense");
+
+const titleVoiceBtn = document.getElementById("titleVoiceBtn");
+const amountVoiceBtn = document.getElementById("amountVoiceBtn");
 
 // Курсы (упрощённо)
 const RATES = {
@@ -283,6 +286,41 @@ searchInputEl.addEventListener("input", () => {
 document.getElementById("themeToggle").addEventListener("click", () => {
   document.body.classList.toggle("alt-theme");
 });
+
+// Голосовой ввод (Web Speech API, если есть)
+
+function setupVoiceButton(button, targetInput, mode) {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    button.style.display = "none";
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = "ru-RU";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  rec.addEventListener("result", (e) => {
+    const text = e.results[0][0].transcript.trim();
+    if (mode === "text") {
+      targetInput.value = text;
+    } else if (mode === "number") {
+      const num = parseFloat(text.replace(",", ".").replace(/[^\d.]/g, ""));
+      if (!isNaN(num)) targetInput.value = num;
+    }
+  });
+
+  button.addEventListener("click", () => {
+    try {
+      rec.start();
+    } catch (e) {}
+  });
+}
+
+setupVoiceButton(titleVoiceBtn, expTitleEl, "text");
+setupVoiceButton(amountVoiceBtn, expAmountEl, "number");
 
 // Инициализация
 

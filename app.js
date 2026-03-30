@@ -1,3 +1,21 @@
+let state = {
+  trips: {},
+  activeTrip: null
+};
+
+function saveState() {
+  localStorage.setItem("travelcar_state", JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem("travelcar_state");
+  if (saved) {
+    state = JSON.parse(saved);
+  }
+}
+
+loadState();
+
 // формат суммы
 function fmt(amount) {
   return amount.toFixed(2).replace(".", ",") + " €";

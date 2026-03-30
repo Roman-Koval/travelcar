@@ -2,24 +2,20 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Travel Car</title>
+  <title>TRAVEL.CAR</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <link rel="stylesheet" href="styles.css" />
   <meta name="theme-color" content="#020617" />
-
-  <!-- Chart.js -->
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div class="logo">TRAVEL<span>.CAR</span></div>
-      <button class="icon-btn" id="themeToggle" title="Тема">🌓</button>
+      <button class="icon-btn" id="themeToggle" title="Переключить тему">🌓</button>
     </header>
 
     <main>
-      <!-- Блок поездки -->
       <section class="trip-header">
         <div>
           <div class="trip-name" id="tripName">Поездка 1</div>
@@ -43,7 +39,6 @@
         </div>
       </section>
 
-      <!-- Сводка -->
       <section class="summary">
         <div class="summary-card">
           <div class="label">Общие расходы</div>
@@ -59,12 +54,10 @@
         </div>
       </section>
 
-      <!-- Действия -->
       <section class="actions">
         <button class="primary" id="addExpenseBtn">Добавить расход</button>
       </section>
 
-      <!-- Графики -->
       <section class="charts">
         <div class="chart-card">
           <div class="chart-title">По категориям</div>
@@ -76,7 +69,6 @@
         </div>
       </section>
 
-      <!-- Поиск и журнал -->
       <section class="list-header">
         <div class="list-title">Журнал расходов</div>
         <input type="search" id="searchInput" placeholder="Поиск..." />
@@ -86,7 +78,6 @@
     </main>
   </div>
 
-  <!-- Модалка добавления расхода -->
   <div class="modal-backdrop" id="expenseModal">
     <div class="modal">
       <div class="modal-header">

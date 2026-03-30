@@ -311,6 +311,14 @@ const modalDate = document.getElementById("modalDate");
 const modalLocation = document.getElementById("modalLocation");
 const modalMap = document.getElementById("modalMap");
 
+// ===============================
+// 7. Генерация статической карты OSM
+// ===============================
+
+function getStaticMapURL(lat, lon, zoom = 14) {
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=400x300&markers=${lat},${lon},red-pushpin`;
+}
+
 function openExpenseModal(exp, trip) {
   modalTitle.textContent = exp.title;
   modalAmount.textContent = `${exp.amount} ${trip.currency}`;
@@ -320,11 +328,17 @@ function openExpenseModal(exp, trip) {
 
   // Пока просто заглушка под карту
   modalMap.innerHTML = "";
-  if (exp.lat && exp.lon) {
-    modalMap.textContent = `Координаты: ${exp.lat.toFixed(5)}, ${exp.lon.toFixed(5)}`;
-  } else {
-    modalMap.textContent = "Координаты не сохранены";
-  }
+
+if (exp.lat && exp.lon) {
+  const img = document.createElement("img");
+  img.src = getStaticMapURL(exp.lat, exp.lon);
+  img.alt = "Map";
+  img.style.width = "100%";
+  img.style.borderRadius = "10px";
+  modalMap.appendChild(img);
+} else {
+  modalMap.textContent = "Координаты не сохранены";
+}
 
   expenseModal.classList.remove("hidden");
 }

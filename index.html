@@ -1,135 +1,85 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>TRAVEL.CAR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#020617" />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TravelCar 2.0</title>
+
+    <!-- Подключение стилей -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app">
+
+    <!-- ========================= -->
+    <!--        ШАПКА + ПОЕЗДКИ   -->
+    <!-- ========================= -->
+
     <header>
-  <h1>TRAVEL.CAR</h1>
+        <h1>TRAVEL.CAR</h1>
 
-  <div class="trip-selector">
-    <select id="tripSelect"></select>
-    <button id="newTripBtn">+</button>
-  </div>
-</header>
-    <main>
-      <section class="trip-header">
-        <div>
-          <div class="trip-name" id="tripName">Поездка 1</div>
-          <div class="trip-dates" id="tripDates">Без дат</div>
+        <div class="trip-selector">
+            <select id="tripSelect"></select>
+            <button id="newTripBtn">+</button>
         </div>
-        <div class="trip-right">
-          <div class="trip-budget">
-            <label>Бюджет, €</label>
-            <input type="number" id="tripBudget" min="0" />
-          </div>
-          <div class="trip-currency">
-            <label>Валюта</label>
-            <select id="baseCurrency">
-              <option value="EUR">EUR — Евро</option>
-              <option value="USD">USD — Доллар</option>
-              <option value="UAH">UAH — Гривна</option>
-              <option value="TRY">TRY — Лира</option>
-              <option value="PLN">PLN — Злотый</option>
-            </select>
-          </div>
-        </div>
-      </section>
+    </header>
 
-      <section class="summary">
-        <div class="summary-card">
-          <div class="label">Общие расходы</div>
-          <div class="value" id="totalAmount">0,00 €</div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Остаток бюджета</div>
-          <div class="value" id="budgetLeft">—</div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Расходов</div>
-          <div class="value" id="expenseCount">0</div>
-        </div>
-      </section>
 
-      <section class="actions">
-  <button class="primary" id="addExpenseBtn">Добавить расход</button>
-  <button class="secondary" id="voiceAddBtn">🎤 Добавить голосом</button>
-</section>
+    <!-- ========================= -->
+    <!--     ФОРМА ДОБАВЛЕНИЯ      -->
+    <!-- ========================= -->
 
-      <section class="charts">
-        <div class="chart-card">
-          <div class="chart-title">По категориям</div>
-          <canvas id="categoryChart"></canvas>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">По дням</div>
-          <canvas id="dailyChart"></canvas>
-        </div>
-      </section>
+    <section class="add-expense">
+        <h2>Добавить расход</h2>
 
-      <section class="list-header">
-        <div class="list-title">Журнал расходов</div>
-        <input type="search" id="searchInput" placeholder="Поиск..." />
-      </section>
-
-      <section class="expense-list" id="expenseList"></section>
-    </main>
-  </div>
-
-  <div class="modal-backdrop" id="expenseModal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">Новый расход</div>
-        <button class="icon-btn" id="closeModal">✕</button>
-      </div>
-      <div class="modal-body">
-        <label>Название</label>
-        <div class="field-with-mic">
-          <input type="text" id="expTitle" placeholder="Например: Заправка, Кофе..." />
-          <button class="mic-btn" id="titleVoiceBtn" title="Голосом">🎤</button>
-        </div>
-
-        <label>Сумма</label>
-        <div class="field-with-mic">
-          <input type="number" id="expAmount" min="0" step="0.01" />
-          <button class="mic-btn" id="amountVoiceBtn" title="Голосом">🎤</button>
-        </div>
-
-        <label>Категория</label>
+        <input type="text" id="expTitle" placeholder="Название">
+        <input type="number" id="expAmount" placeholder="Сумма">
         <select id="expCategory">
-          <option value="fuel">Топливо</option>
-          <option value="stay">Жильё</option>
-          <option value="food">Питание</option>
-          <option value="transport">Транспорт</option>
-          <option value="fun">Развлечения</option>
-          <option value="other">Другое</option>
+            <option value="fuel">Топливо</option>
+            <option value="food">Еда</option>
+            <option value="hotel">Жильё</option>
+            <option value="toll">Платные дороги</option>
+            <option value="parking">Парковка</option>
+            <option value="other">Другое</option>
         </select>
 
-        <label>Дата</label>
-        <input type="date" id="expDate" />
+        <button id="addExpenseBtn">Добавить</button>
+    </section>
 
-        <label>Валюта</label>
-        <select id="expCurrency">
-          <option value="EUR">EUR</option>
-          <option value="USD">USD</option>
-          <option value="UAH">UAH</option>
-          <option value="TRY">TRY</option>
-          <option value="PLN">PLN</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button class="secondary" id="cancelExpense">Отмена</button>
-        <button class="primary" id="saveExpense">Сохранить</button>
-      </div>
+
+    <!-- ========================= -->
+    <!--     СПИСОК РАСХОДОВ       -->
+    <!-- ========================= -->
+
+    <section class="expense-list">
+        <h2>Расходы</h2>
+        <div id="expenseList"></div>
+    </section>
+
+
+    <!-- ========================= -->
+    <!--     МОДАЛКА РАСХОДА       -->
+    <!-- ========================= -->
+
+    <div id="expenseModal" class="modal hidden">
+        <div class="modal-content">
+            <span id="closeModal" class="close">&times;</span>
+
+            <h3 id="modalTitle"></h3>
+            <p><strong>Сумма:</strong> <span id="modalAmount"></span></p>
+            <p><strong>Категория:</strong> <span id="modalCategory"></span></p>
+            <p><strong>Дата:</strong> <span id="modalDate"></span></p>
+            <p><strong>Место:</strong> <span id="modalLocation"></span></p>
+
+            <div id="modalMap" class="map"></div>
+        </div>
     </div>
-  </div>
 
-  <script src="app.js"></script>
+
+    <!-- ========================= -->
+    <!--     ПОДКЛЮЧЕНИЕ JS        -->
+    <!-- ========================= -->
+
+    <script src="app.js"></script>
+
 </body>
 </html>

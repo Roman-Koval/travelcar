@@ -315,7 +315,7 @@ function exportJSON() {
 // ===============================
 // 10. Экспорт PDF
 // ===============================
-
+document.getElementById("exportPDF").addEventListener("click", exportPDF);
 async function exportPDF() {
   if (!state.activeTrip) return;
 

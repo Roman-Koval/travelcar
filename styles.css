@@ -1,0 +1,329 @@
+:root {
+  --bg: #020617;
+  --bg-elevated: #020617;
+  --card: #020617;
+  --accent: #22c55e;
+  --accent-soft: rgba(34, 197, 94, 0.15);
+  --text: #e5e7eb;
+  --text-soft: #9ca3af;
+  --danger: #ef4444;
+  --border: #1f2937;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+  --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), #020617 55%);
+  padding: 16px 16px 24px;
+}
+
+/* Topbar */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.logo span {
+  color: var(--accent);
+}
+
+.icon-btn {
+  border: none;
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+/* Trip header */
+
+.trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: radial-gradient(circle at top left, #1f2937, #020617);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 14px;
+}
+
+.trip-name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.trip-dates {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.trip-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.trip-budget label,
+.trip-currency label {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.trip-budget input,
+.trip-currency select {
+  margin-top: 4px;
+  width: 120px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* Summary */
+
+.summary {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 1.1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.summary-card {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: var(--radius-md);
+  padding: 10px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.summary-card .label {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-bottom: 4px;
+}
+
+.summary-card .value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Actions */
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  border-radius: 999px;
+  padding: 10px 14px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.secondary {
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Charts */
+
+.charts {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chart-card {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.chart-title {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}
+
+/* List header */
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.list-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#searchInput {
+  width: 55%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text);
+  font-size: 12px;
+}
+
+/* Expense list */
+
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+}
+.exp-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.exp-title {
+  font-size: 13px;
+}
+
+.exp-meta {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.exp-amount {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Modal */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal-backdrop.show {
+  display: flex;
+}
+
+.modal {
+  width: 100%;
+  max-width: 380px;
+  background: #020617;
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modal-body label {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.modal-body input,
+.modal-body select {
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+}
+
+/* Тема-переключатель (заглушка) */
+
+body.alt-theme {
+  background: radial-gradient(circle at top, #111827 0, #020617 55%);
+}

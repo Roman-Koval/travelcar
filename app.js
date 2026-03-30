@@ -1,4 +1,4 @@
-// Форматирование суммы в €
+ // Форматирование суммы в €
 function fmt(amount) {
   return amount.toFixed(2).replace(".", ",") + " €";
 }
@@ -287,8 +287,3 @@ document.getElementById("themeToggle").addEventListener("click", () => {
 
 loadState();
 renderAll();
-
-// PWA: регистрация service worker
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-}

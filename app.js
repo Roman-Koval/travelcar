@@ -491,11 +491,11 @@ function getStaticMapURL(lat, lon, zoom = 14) {
 }
 
 function openExpenseModal(exp, trip) {
-  modalTitle.textContent = exp.title;
-  modalAmount.textContent = `${exp.amount} ${trip.currency}`;
-  modalCategory.textContent = exp.category;
-  modalDate.textContent = new Date(exp.date).toLocaleString();
-  modalLocation.textContent = exp.location || "Место не определено";
+  modalTitle.textContent = `${CATEGORY_ICONS[exp.category] || "📦"}  ${exp.title}`;
+modalAmount.textContent = `${exp.amount} ${trip.currency}`;
+modalCategory.textContent = exp.category.toUpperCase();
+modalDate.textContent = new Date(exp.date).toLocaleString();
+modalLocation.textContent = exp.location || "Место не определено";
 
   // Пока просто заглушка под карту
   modalMap.innerHTML = "";

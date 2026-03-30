@@ -312,6 +312,55 @@ function exportJSON() {
 
   URL.revokeObjectURL(url);
 }
+// ===============================
+// 10. Экспорт PDF
+// ===============================
+
+async function exportPDF() {
+  if (!state.activeTrip) return;
+
+  const trip = state.trips[state.activeTrip];
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Заголовок
+  doc.setFontSize(20);
+  doc.text("TravelCar Report", 14, 20);
+
+  // Название поездки
+  doc.setFontSize(14);
+  doc.text(`Trip: ${trip.name}`, 14, 35);
+
+  // Валюта
+  doc.text(`Currency: ${trip.currency}`, 14, 45);
+
+  // Таблица расходов
+  const tableData = trip.expenses.map(exp => [
+    exp.title,
+    exp.amount + " " + trip.currency,
+    exp.category,
+    new Date(exp.date).toLocaleString(),
+    exp.location || "",
+  ]);
+
+  doc.autoTable({
+    head: [["Title", "Amount", "Category", "Date", "Location"]],
+    body: tableData,
+    startY: 55,
+    styles: { fontSize: 10 }
+  });
+
+  // Итог
+  const total = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
+  const finalY = doc.lastAutoTable.finalY + 15;
+
+  doc.setFontSize(14);
+  doc.text(`Total: ${total} ${trip.currency}`, 14, finalY);
+
+  // Сохранение
+  doc.save(`${trip.name.replace(/[^a-z0-9]/gi, "_")}.pdf`);
+}
 function renderAll() {
   renderTripSelector();
   renderExpenses();

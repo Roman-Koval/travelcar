@@ -260,14 +260,22 @@ function getLocationString(callback) {
     callback("");
     return;
   }
+
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
-      const loc = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      const loc = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
       callback(loc);
     },
-    () => callback(""),
-    { enableHighAccuracy: true, timeout: 5000 }
+    (err) => {
+      console.warn("GPS error:", err);
+      callback("");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
   );
 }
 

@@ -15,14 +15,33 @@
     "Segoe UI", sans-serif;
 }
 
+body.light {
+  --bg: #f3f4f6;
+  --bg-elevated: #ffffff;
+  --card: #ffffff;
+  --text: #111827;
+  --text-soft: #6b7280;
+  --border: #e5e7eb;
+  --accent: #16a34a;
+  --accent-soft: rgba(22, 163, 74, 0.12);
+}
+
+/* базовая разметка */
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
   font-family: var(--font-main);
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
   color: var(--text);
@@ -31,15 +50,24 @@ body {
   justify-content: center;
 }
 
+body.light {
+  background: #e5e7eb;
+}
+
 .app {
   width: 100%;
   max-width: 480px;
   min-height: 100vh;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), #020617 55%);
   padding: 16px 16px 24px;
+  overflow-x: hidden;
 }
 
-/* Topbar */
+body.light .app {
+  background: linear-gradient(180deg, #f9fafb, #e5e7eb);
+}
+
+/* topbar */
 
 .topbar {
   display: flex;
@@ -68,7 +96,11 @@ body {
   cursor: pointer;
 }
 
-/* Trip header */
+body.light .icon-btn {
+  background: #e5e7eb;
+}
+
+/* trip header */
 
 .trip-header {
   display: flex;
@@ -79,6 +111,11 @@ body {
   padding: 14px 16px;
   box-shadow: var(--shadow-soft);
   margin-bottom: 14px;
+}
+
+body.light .trip-header {
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
 }
 
 .trip-name {
@@ -117,11 +154,16 @@ body {
   font-size: 13px;
 }
 
-/* Summary */
+body.light .trip-budget input,
+body.light .trip-currency select {
+  background: #f9fafb;
+}
+
+/* summary */
 
 .summary {
   display: grid;
-  grid-template-columns: 1.1fr 1.1fr 1.1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -131,6 +173,11 @@ body {
   border-radius: var(--radius-md);
   padding: 10px 10px;
   border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+body.light .summary-card {
+  background: #ffffff;
+  border-color: #e5e7eb;
 }
 
 .summary-card .label {
@@ -144,7 +191,7 @@ body {
   font-weight: 600;
 }
 
-/* Actions */
+/* actions */
 
 .actions {
   display: flex;
@@ -174,7 +221,11 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
-/* Charts */
+body.light .secondary {
+  background: #f9fafb;
+}
+
+/* charts */
 
 .charts {
   display: grid;
@@ -190,13 +241,18 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
+body.light .chart-card {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
 .chart-title {
   font-size: 11px;
   color: var(--text-soft);
   margin-bottom: 6px;
 }
 
-/* List header */
+/* list header */
 
 .list-header {
   display: flex;
@@ -220,7 +276,11 @@ body {
   font-size: 12px;
 }
 
-/* Expense list */
+body.light #searchInput {
+  background: #f9fafb;
+}
+
+/* expense list */
 
 .expense-list {
   display: flex;
@@ -236,6 +296,11 @@ body {
   border-radius: var(--radius-md);
   padding: 8px 10px;
   border: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+body.light .expense-item {
+  background: #ffffff;
+  border-color: #e5e7eb;
 }
 
 .exp-main {
@@ -258,7 +323,7 @@ body {
   font-weight: 600;
 }
 
-/* Modal */
+/* modal */
 
 .modal-backdrop {
   position: fixed;
@@ -275,13 +340,19 @@ body {
 }
 
 .modal {
-  width: 100%;
+  width: calc(100% - 32px);
   max-width: 380px;
   background: #020617;
   border-radius: 18px;
   padding: 14px 14px 12px;
   box-shadow: var(--shadow-soft);
   border: 1px solid rgba(148, 163, 184, 0.25);
+  margin: 0 auto;
+}
+
+body.light .modal {
+  background: #ffffff;
+  border-color: #e5e7eb;
 }
 
 .modal-header {
@@ -318,12 +389,17 @@ body {
   font-size: 13px;
 }
 
+body.light .modal-body input,
+body.light .modal-body select {
+  background: #f9fafb;
+}
+
 .modal-footer {
   display: flex;
   gap: 8px;
 }
 
-/* Поле с микрофоном */
+/* mic */
 
 .field-with-mic {
   display: flex;
@@ -345,8 +421,6 @@ body {
   font-size: 14px;
 }
 
-/* Тема-переключатель (заглушка) */
-
-body.alt-theme {
-  background: radial-gradient(circle at top, #111827 0, #020617 55%);
+body.light .mic-btn {
+  background: #e5e7eb;
 }

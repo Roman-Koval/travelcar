@@ -291,13 +291,24 @@ function renderExpenses() {
 
     const locationText = exp.location ? exp.location : "Место не определено";
 
-    div.innerHTML = `
-      <strong>${exp.title}</strong>
-      <span><strong>${exp.amount}</strong> ${trip.currency}</span>
-      <small>${new Date(exp.date).toLocaleString()}</small>
-      <small>${locationText}</small>
-    `;
+   const icon = CATEGORY_ICONS[exp.category] || "📦";
 
+div.innerHTML = `
+  <div class="exp-row">
+    <div class="exp-left">
+      <div class="exp-icon">${icon}</div>
+      <div class="exp-info">
+        <div class="exp-title">${exp.title}</div>
+        <div class="exp-location">${locationText}</div>
+      </div>
+    </div>
+
+    <div class="exp-right">
+      <div class="exp-amount">${exp.amount} ${trip.currency}</div>
+      <div class="exp-date">${new Date(exp.date).toLocaleString()}</div>
+    </div>
+  </div>
+`;
     div.addEventListener("click", () => openExpenseModal(exp, trip));
 
     container.appendChild(div);

@@ -1,4 +1,4 @@
-:root {
+ :root {
   --bg: #020617;
   --bg-elevated: #020617;
   --card: #020617;
@@ -237,7 +237,7 @@ body {
   padding: 8px 10px;
   border: 1px solid rgba(31, 41, 55, 0.9);
 }
-.exp-main {
+ .exp-main {
   display: flex;
   flex-direction: column;
 }

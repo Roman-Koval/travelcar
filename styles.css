@@ -185,3 +185,12 @@ header {
 #shareTrip {
     background: #27ae60;
 }
+.trip-selector select {
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid #4a90e2;
+    font-size: 16px;
+    background: #fff;
+    color: #333;
+    font-weight: 500;
+}

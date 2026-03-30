@@ -194,3 +194,52 @@ header {
     color: #333;
     font-weight: 500;
 }
+/* ========================= */
+/*     Улучшенные карточки   */
+/* ========================= */
+
+.exp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.exp-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.exp-icon {
+    font-size: 28px;
+}
+
+.exp-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.exp-title {
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.exp-location {
+    font-size: 13px;
+    color: #777;
+}
+
+.exp-right {
+    text-align: right;
+}
+
+.exp-amount {
+    font-size: 17px;
+    font-weight: bold;
+    color: #4a90e2;
+}
+
+.exp-date {
+    font-size: 12px;
+    color: #777;
+}

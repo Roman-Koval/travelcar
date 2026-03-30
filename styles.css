@@ -424,3 +424,20 @@ body.light .modal-body select {
 body.light .mic-btn {
   background: #e5e7eb;
 }
+/* Фикс съехавшего графика */
+.charts {
+  width: 100%;
+  overflow: hidden;
+}
+
+.chart-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+}

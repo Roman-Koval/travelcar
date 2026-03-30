@@ -152,29 +152,109 @@ document.getElementById("newTripBtn").addEventListener("click", async () => {
     createTrip(name, info || null);
   }
 });
+// ===============================
+// 4. Reverse geocoding для расхода
+// ===============================
 
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+    const res = await fetch(url, {
+      headers: { "Accept-Language": "en" }
+    });
+    const data = await res.json();
+
+    const city =
+      data.address.city ||
+      data.address.town ||
+      data.address.village ||
+      data.address.hamlet ||
+      "";
+    const country = data.address.country || "";
+    const countryCode =
+      (data.address.country_code || data.address.countryCode || "").toUpperCase();
+
+    return {
+      city,
+      country,
+      countryCode
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
 // ===============================
 // 3. Добавление расходов
 // ===============================
 
-function addExpense(title, amount, category = "other") {
+async function addExpense(title, amount, category = "other") {
   if (!state.activeTrip) return;
 
   const trip = state.trips[state.activeTrip];
 
-  trip.expenses.push({
+  let lat = null;
+  let lon = null;
+  let locationInfo = null;
+
+  // Пытаемся получить координаты
+  if (navigator.geolocation) {
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 8000
+        });
+      });
+
+      lat = pos.coords.latitude;
+      lon = pos.coords.longitude;
+
+      locationInfo = await reverseGeocode(lat, lon);
+    } catch (e) {
+      // если не получилось — просто без локации
+    }
+  }
+
+  const exp = {
     id: "exp_" + Date.now(),
     title,
     amount: parseFloat(amount),
     category,
-    date: new Date().toISOString()
-  });
+    date: new Date().toISOString(),
+    lat,
+    lon,
+    location: locationInfo
+      ? `${locationInfo.city || ""}${locationInfo.city ? ", " : ""}${locationInfo.country || ""}`
+      : null,
+    countryCode: locationInfo?.countryCode || null
+  };
+
+  trip.expenses.push(exp);
 
   saveState();
   renderAll();
 }
+const titleInput = document.getElementById("expTitle");
+const amountInput = document.getElementById("expAmount");
+const categorySelect = document.getElementById("expCategory");
+const addBtn = document.getElementById("addExpenseBtn");
 
+addBtn.addEventListener("click", async () => {
+  const title = titleInput.value.trim();
+  const amount = amountInput.value.trim();
+  const category = categorySelect.value;
+
+  if (!title || !amount) {
+    alert("Введите название и сумму");
+    return;
+  }
+
+  await addExpense(title, amount, category);
+
+  titleInput.value = "";
+  amountInput.value = "";
+});
 
 // ===============================
 // 4. Рендер расходов
@@ -191,11 +271,18 @@ function renderExpenses() {
   trip.expenses.forEach(exp => {
     const div = document.createElement("div");
     div.className = "expense-item";
+
+    const locationText = exp.location ? exp.location : "Место не определено";
+
     div.innerHTML = `
       <strong>${exp.title}</strong>
       <span>${exp.amount} ${trip.currency}</span>
       <small>${new Date(exp.date).toLocaleString()}</small>
+      <small>${locationText}</small>
     `;
+
+    div.addEventListener("click", () => openExpenseModal(exp, trip));
+
     container.appendChild(div);
   });
 }
@@ -210,6 +297,47 @@ function renderAll() {
   renderExpenses();
 }
 
+// ===============================
+// 6. Модалка расхода
+// ===============================
+
+const expenseModal = document.getElementById("expenseModal");
+const closeModalBtn = document.getElementById("closeModal");
+
+const modalTitle = document.getElementById("modalTitle");
+const modalAmount = document.getElementById("modalAmount");
+const modalCategory = document.getElementById("modalCategory");
+const modalDate = document.getElementById("modalDate");
+const modalLocation = document.getElementById("modalLocation");
+const modalMap = document.getElementById("modalMap");
+
+function openExpenseModal(exp, trip) {
+  modalTitle.textContent = exp.title;
+  modalAmount.textContent = `${exp.amount} ${trip.currency}`;
+  modalCategory.textContent = exp.category;
+  modalDate.textContent = new Date(exp.date).toLocaleString();
+  modalLocation.textContent = exp.location || "Место не определено";
+
+  // Пока просто заглушка под карту
+  modalMap.innerHTML = "";
+  if (exp.lat && exp.lon) {
+    modalMap.textContent = `Координаты: ${exp.lat.toFixed(5)}, ${exp.lon.toFixed(5)}`;
+  } else {
+    modalMap.textContent = "Координаты не сохранены";
+  }
+
+  expenseModal.classList.remove("hidden");
+}
+
+closeModalBtn.addEventListener("click", () => {
+  expenseModal.classList.add("hidden");
+});
+
+expenseModal.addEventListener("click", (e) => {
+  if (e.target === expenseModal) {
+    expenseModal.classList.add("hidden");
+  }
+});
 
 // ===============================
 // 6. Инициализация

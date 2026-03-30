@@ -3,14 +3,14 @@ function fmt(amount) {
   return amount.toFixed(2).replace(".", ",") + " €";
 }
 
-const STORAGE_KEY = "travel_car_final_v1";
+const STORAGE_KEY = "travel_car_final_v2";
 
 let state = {
   tripName: "Поездка 1",
   tripDates: "",
   budget: 0,
   baseCurrency: "EUR",
-  expenses: [] // {id,title,amount,currency,category,date}
+  expenses: [] // {id,title,amount,currency,category,date,location}
 };
 
 function loadState() {
@@ -67,6 +67,17 @@ function toBase(amount, cur) {
   return eur * (RATES[base] || 1);
 }
 
+// авто‑категория по названию
+function detectCategory(title) {
+  const t = title.toLowerCase();
+  if (t.includes("заправ") || t.includes("fuel") || t.includes("бенз")) return "fuel";
+  if (t.includes("отель") || t.includes("hotel") || t.includes("жиль")) return "stay";
+  if (t.includes("еда") || t.includes("food") || t.includes("кофе") || t.includes("кафе")) return "food";
+  if (t.includes("такси") || t.includes("bus") || t.includes("train") || t.includes("транспорт")) return "transport";
+  if (t.includes("бар") || t.includes("club") || t.includes("развлеч")) return "fun";
+  return "other";
+}
+
 // графики
 let categoryChart = null;
 let dailyChart = null;
@@ -103,7 +114,8 @@ function renderList() {
     return (
       e.title.toLowerCase().includes(q) ||
       e.category.toLowerCase().includes(q) ||
-      (e.date || "").includes(q)
+      (e.date || "").includes(q) ||
+      (e.location || "").toLowerCase().includes(q)
     );
   });
 
@@ -123,6 +135,7 @@ function renderList() {
 
       const meta = document.createElement("div");
       meta.className = "exp-meta";
+      const place = e.location ? ` • 📍 ${e.location}` : "";
       meta.textContent =
         (e.date || "без даты") +
         " • " +
@@ -130,7 +143,8 @@ function renderList() {
         " • " +
         e.amount.toFixed(2) +
         " " +
-        e.currency;
+        e.currency +
+        place;
 
       main.appendChild(title);
       main.appendChild(meta);
@@ -225,45 +239,74 @@ function openModal() {
   expenseModalEl.classList.add("show");
   expTitleEl.value = "";
   expAmountEl.value = "";
-  expCategoryEl.value = "other";
   expDateEl.valueAsDate = new Date();
   expCurrencyEl.value = state.baseCurrency;
+  expCategoryEl.value = "other";
 }
 
 function closeModal() {
   expenseModalEl.classList.remove("show");
 }
 
-// обработчики
+// обработчики модалки
 
 addExpenseBtn.addEventListener("click", openModal);
 closeModalBtn.addEventListener("click", closeModal);
 cancelExpenseBtn.addEventListener("click", closeModal);
 
+// GPS: получить координаты и превратить в строку "lat, lon"
+function getLocationString(callback) {
+  if (!navigator.geolocation) {
+    callback("");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const loc = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      callback(loc);
+    },
+    () => callback(""),
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
+}
+
 saveExpenseBtn.addEventListener("click", () => {
-  const title = expTitleEl.value.trim() || "Без названия";
+  const rawTitle = expTitleEl.value.trim();
+  const title = rawTitle || "Без названия";
   const amount = parseFloat(expAmountEl.value || "0");
   if (!amount || amount <= 0) {
     alert("Введите сумму");
     return;
   }
-  const category = expCategoryEl.value;
+
+  // авто‑категория, если пользователь сам не менял
+  let category = expCategoryEl.value;
+  if (category === "other" && rawTitle) {
+    category = detectCategory(rawTitle);
+  }
+
   const date = expDateEl.value || "";
   const currency = expCurrencyEl.value;
 
-  state.expenses.push({
-    id: Date.now(),
-    title,
-    amount,
-    category,
-    date,
-    currency
-  });
+  getLocationString((loc) => {
+    state.expenses.push({
+      id: Date.now(),
+      title,
+      amount,
+      category,
+      date,
+      currency,
+      location: loc
+    });
 
-  saveState();
-  closeModal();
-  renderAll();
+    saveState();
+    closeModal();
+    renderAll();
+  });
 });
+
+// бюджет / валюта
 
 tripBudgetEl.addEventListener("change", () => {
   state.budget = parseFloat(tripBudgetEl.value || "0") || 0;
@@ -297,7 +340,9 @@ function toggleTheme() {
   localStorage.setItem("travel_car_theme", isLight ? "light" : "dark");
 }
 
-themeToggleBtn.addEventListener("click", toggleTheme);
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener("click", toggleTheme);
+}
 
 // голос
 
@@ -318,35 +363,29 @@ function setupVoiceButton(button, targetInput, mode) {
     const text = e.results[0][0].transcript.trim();
     if (mode === "text") {
       targetInput.value = text;
+      // авто‑категория по названию
+      expCategoryEl.value = detectCategory(text);
     } else if (mode === "number") {
       const num = parseFloat(text.replace(",", ".").replace(/[^\d.]/g, ""));
       if (!isNaN(num)) targetInput.value = num;
     }
   });
 
-  button.addEventListener("mousedown", () => {
+  const start = () => {
     try {
       rec.start();
     } catch (e) {}
-  });
-
-  button.addEventListener("mouseup", () => {
+  };
+  const stop = () => {
     try {
       rec.stop();
     } catch (e) {}
-  });
+  };
 
-  button.addEventListener("touchstart", () => {
-    try {
-      rec.start();
-    } catch (e) {}
-  });
-
-  button.addEventListener("touchend", () => {
-    try {
-      rec.stop();
-    } catch (e) {}
-  });
+  button.addEventListener("mousedown", start);
+  button.addEventListener("mouseup", stop);
+  button.addEventListener("touchstart", start);
+  button.addEventListener("touchend", stop);
 }
 
 setupVoiceButton(titleVoiceBtn, expTitleEl, "text");

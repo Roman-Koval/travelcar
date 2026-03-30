@@ -1,10 +1,9 @@
-// Форматирование суммы в €
+// формат суммы
 function fmt(amount) {
   return amount.toFixed(2).replace(".", ",") + " €";
 }
 
-// Хранилище
-const STORAGE_KEY = "travel_car_v2";
+const STORAGE_KEY = "travel_car_final_v1";
 
 let state = {
   tripName: "Поездка 1",
@@ -25,7 +24,7 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-// Элементы
+// элементы
 const tripNameEl = document.getElementById("tripName");
 const tripDatesEl = document.getElementById("tripDates");
 const tripBudgetEl = document.getElementById("tripBudget");
@@ -50,8 +49,9 @@ const saveExpenseBtn = document.getElementById("saveExpense");
 
 const titleVoiceBtn = document.getElementById("titleVoiceBtn");
 const amountVoiceBtn = document.getElementById("amountVoiceBtn");
+const themeToggleBtn = document.getElementById("themeToggle");
 
-// Курсы (упрощённо)
+// курсы
 const RATES = {
   EUR: 1,
   USD: 1.1,
@@ -67,8 +67,7 @@ function toBase(amount, cur) {
   return eur * (RATES[base] || 1);
 }
 
-// Рендер
-
+// графики
 let categoryChart = null;
 let dailyChart = null;
 
@@ -83,7 +82,7 @@ function renderSummary() {
   if (state.budget > 0) {
     const left = state.budget - total;
     budgetLeftEl.textContent = fmt(left);
-    budgetLeftEl.style.color = left < 0 ? "#f97373" : "#4ade80";
+    budgetLeftEl.style.color = left < 0 ? "#ef4444" : "#22c55e";
   } else {
     budgetLeftEl.textContent = "—";
     budgetLeftEl.style.color = "#e5e7eb";
@@ -220,7 +219,7 @@ function renderAll() {
   renderCharts();
 }
 
-// Модалка
+// модалка
 
 function openModal() {
   expenseModalEl.classList.add("show");
@@ -235,7 +234,7 @@ function closeModal() {
   expenseModalEl.classList.remove("show");
 }
 
-// Обработчики
+// обработчики
 
 addExpenseBtn.addEventListener("click", openModal);
 closeModalBtn.addEventListener("click", closeModal);
@@ -282,12 +281,25 @@ searchInputEl.addEventListener("input", () => {
   renderList();
 });
 
-// Тема (заглушка)
-document.getElementById("themeToggle").addEventListener("click", () => {
-  document.body.classList.toggle("alt-theme");
-});
+// тема
 
-// Голосовой ввод (Web Speech API, если есть)
+function loadTheme() {
+  const t = localStorage.getItem("travel_car_theme") || "dark";
+  if (t === "light") {
+    document.body.classList.add("light");
+  } else {
+    document.body.classList.remove("light");
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle("light");
+  localStorage.setItem("travel_car_theme", isLight ? "light" : "dark");
+}
+
+themeToggleBtn.addEventListener("click", toggleTheme);
+
+// голос
 
 function setupVoiceButton(button, targetInput, mode) {
   const SpeechRecognition =
@@ -312,9 +324,27 @@ function setupVoiceButton(button, targetInput, mode) {
     }
   });
 
-  button.addEventListener("click", () => {
+  button.addEventListener("mousedown", () => {
     try {
       rec.start();
+    } catch (e) {}
+  });
+
+  button.addEventListener("mouseup", () => {
+    try {
+      rec.stop();
+    } catch (e) {}
+  });
+
+  button.addEventListener("touchstart", () => {
+    try {
+      rec.start();
+    } catch (e) {}
+  });
+
+  button.addEventListener("touchend", () => {
+    try {
+      rec.stop();
     } catch (e) {}
   });
 }
@@ -322,7 +352,8 @@ function setupVoiceButton(button, targetInput, mode) {
 setupVoiceButton(titleVoiceBtn, expTitleEl, "text");
 setupVoiceButton(amountVoiceBtn, expAmountEl, "number");
 
-// Инициализация
+// init
 
 loadState();
+loadTheme();
 renderAll();

@@ -441,3 +441,26 @@ canvas {
   height: auto !important;
   display: block;
 }
+.trip-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.trip-selector select {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.trip-selector button {
+  padding: 8px 12px;
+  font-size: 20px;
+  border-radius: 8px;
+  border: none;
+  background: #4a90e2;
+  color: white;
+}

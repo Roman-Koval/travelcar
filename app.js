@@ -1,4 +1,4 @@
- // Форматирование суммы в €
+// Форматирование суммы в €
 function fmt(amount) {
   return amount.toFixed(2).replace(".", ",") + " €";
 }
@@ -107,7 +107,7 @@ function renderList() {
 
   filtered
     .slice()
-    .sort((a, b) => (a.date  "").localeCompare(b.date  ""))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
     .forEach((e) => {
       const row = document.createElement("div");
       row.className = "expense-item";
@@ -143,7 +143,8 @@ function renderList() {
       expenseListEl.appendChild(row);
     });
 }
- function renderCharts() {
+
+function renderCharts() {
   const byCat = {};
   const byDay = {};
 
@@ -263,7 +264,7 @@ saveExpenseBtn.addEventListener("click", () => {
 });
 
 tripBudgetEl.addEventListener("change", () => {
-  state.budget = parseFloat(tripBudgetEl.value  "0")  0;
+  state.budget = parseFloat(tripBudgetEl.value || "0") || 0;
   saveState();
   renderAll();
 });

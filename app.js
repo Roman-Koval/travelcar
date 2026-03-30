@@ -128,7 +128,12 @@ function renderTripSelector() {
   Object.values(state.trips).forEach(trip => {
     const opt = document.createElement("option");
     opt.value = trip.id;
-    opt.textContent = trip.name;
+
+    const flag = trip.flag ? trip.flag + " " : "";
+    const currency = trip.currency ? ` (${trip.currency})` : "";
+
+    opt.textContent = `${flag}${trip.name}${currency}`;
+
     if (trip.id === state.activeTrip) opt.selected = true;
     select.appendChild(opt);
   });

@@ -139,7 +139,8 @@ document.getElementById("tripSelect").addEventListener("change", (e) => {
   saveState();
   renderAll();
 });
-
+document.getElementById("exportCSV").addEventListener("click", exportCSV);
+document.getElementById("exportJSON").addEventListener("click", exportJSON);
 document.getElementById("newTripBtn").addEventListener("click", async () => {
   const info = await detectCurrentCountry();
 
@@ -291,12 +292,67 @@ function renderExpenses() {
 // ===============================
 // 5. Главный рендер
 // ===============================
+// ===============================
+// 8. Экспорт JSON
+// ===============================
 
+function exportJSON() {
+  if (!state.activeTrip) return;
+
+  const trip = state.trips[state.activeTrip];
+  const dataStr = JSON.stringify(trip, null, 2);
+
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${trip.name.replace(/[^a-z0-9]/gi, "_")}.json`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 function renderAll() {
   renderTripSelector();
   renderExpenses();
 }
+// ===============================
+// 9. Экспорт CSV
+// ===============================
 
+function exportCSV() {
+  if (!state.activeTrip) return;
+
+  const trip = state.trips[state.activeTrip];
+  const rows = [
+    ["Title", "Amount", "Currency", "Category", "Date", "Location", "Lat", "Lon"]
+  ];
+
+  trip.expenses.forEach(exp => {
+    rows.push([
+      exp.title,
+      exp.amount,
+      trip.currency,
+      exp.category,
+      exp.date,
+      exp.location || "",
+      exp.lat || "",
+      exp.lon || ""
+    ]);
+  });
+
+  const csvContent = rows.map(r => r.join(",")).join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${trip.name.replace(/[^a-z0-9]/gi, "_")}.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 // ===============================
 // 6. Модалка расхода
 // ===============================

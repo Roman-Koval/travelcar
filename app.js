@@ -396,6 +396,90 @@ function setupVoiceButton(button, targetInput, mode) {
   button.addEventListener("touchend", stop);
 }
 
+// === ГОЛОСОВОЕ ДОБАВЛЕНИЕ ОДНОЙ КНОПКОЙ ===
+
+const voiceAddBtn = document.getElementById("voiceAddBtn");
+
+function parseVoiceInput(text) {
+  text = text.toLowerCase();
+
+  // сумма
+  const amountMatch = text.match(/(\d+[.,]?\d*)/);
+  const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", ".")) : 0;
+
+  // валюта
+  let currency = state.baseCurrency;
+  if (text.includes("евро") || text.includes("eur")) currency = "EUR";
+  if (text.includes("доллар") || text.includes("usd")) currency = "USD";
+  if (text.includes("гривн") || text.includes("uah")) currency = "UAH";
+  if (text.includes("лир") || text.includes("try")) currency = "TRY";
+  if (text.includes("злот") || text.includes("pln")) currency = "PLN";
+
+  // название = всё, кроме суммы и валюты
+  let title = text
+    .replace(amountMatch ? amountMatch[1] : "", "")
+    .replace("евро", "")
+    .replace("доллар", "")
+    .replace("гривн", "")
+    .replace("лир", "")
+    .replace("злот", "")
+    .trim();
+
+  if (!title) title = "Расход";
+
+  // категория
+  const category = detectCategory(title);
+
+  return { title, amount, currency, category };
+}
+
+function addExpenseWithVoice() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Ваш браузер не поддерживает голосовой ввод");
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = "ru-RU";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  rec.start();
+
+  rec.addEventListener("result", (e) => {
+    const text = e.results[0][0].transcript.trim();
+    const parsed = parseVoiceInput(text);
+
+    if (!parsed.amount || parsed.amount <= 0) {
+      alert("Не удалось определить сумму");
+      return;
+    }
+
+    getLocationString((loc) => {
+      state.expenses.push({
+        id: Date.now(),
+        title: parsed.title,
+        amount: parsed.amount,
+        category: parsed.category,
+        date: new Date().toISOString().slice(0, 10),
+        currency: parsed.currency,
+        location: loc
+      });
+
+      saveState();
+      renderAll();
+    });
+  });
+
+  rec.addEventListener("error", () => {
+    alert("Ошибка голосового ввода");
+  });
+}
+
+voiceAddBtn.addEventListener("click", addExpenseWithVoice);
+
 setupVoiceButton(titleVoiceBtn, expTitleEl, "text");
 setupVoiceButton(amountVoiceBtn, expAmountEl, "number");
 

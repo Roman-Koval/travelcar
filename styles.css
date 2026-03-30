@@ -141,12 +141,18 @@ header {
 .modal-content {
     background: white;
     padding: 20px;
-    width: 90%;
-    max-width: 400px;
-    border-radius: 12px;
+    width: 92%;
+    max-width: 420px;
+    border-radius: 16px;
     position: relative;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    animation: modalFade 0.25s ease;
 }
 
+@keyframes modalFade {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
 .close {
     position: absolute;
     right: 15px;

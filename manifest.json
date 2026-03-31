@@ -2,7 +2,7 @@
   "name": "TravelCar",
   "short_name": "TravelCar",
   "description": "Travel expense tracker with maps, analytics and offline mode.",
-  "start_url": "index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#1f1f1f",
@@ -18,23 +18,33 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-    "background_color": "#1f1f1f",
-"theme_color": "#4a90e2",
-  ]
+  ],
   "shortcuts": [
-  {
-    "name": "Добавить расход",
-    "short_name": "Добавить",
-    "description": "Быстрое добавление расхода",
-    "url": "./index.html#add",
-    "icons": [{ "src": "travelcar-icon-192.png", "sizes": "192x192" }]
-  },
-  {
-    "name": "Открыть карту",
-    "short_name": "Карта",
-    "description": "Перейти к карте расходов",
-    "url": "./index.html#map",
-    "icons": [{ "src": "travelcar-icon-192.png", "sizes": "192x192" }]
-  }
-]
+    {
+      "name": "Добавить расход",
+      "short_name": "Добавить",
+      "description": "Быстрое добавление расхода",
+      "url": "./index.html#add",
+      "icons": [
+        {
+          "src": "travelcar-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Открыть карту",
+      "short_name": "Карта",
+      "description": "Перейти к карте расходов",
+      "url": "./index.html#map",
+      "icons": [
+        {
+          "src": "travelcar-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }

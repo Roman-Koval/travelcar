@@ -20,6 +20,9 @@ function loadState() {
 }
 
 loadState();
+window.addEventListener("load", () => {
+  document.getElementById("loader").style.display = "none";
+});
 
 // ===============================
 // 2. Тема (Dark / Light)

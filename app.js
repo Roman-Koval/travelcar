@@ -1,867 +1,871 @@
-// ===============================
-// 1. Состояние и загрузка
-// ===============================
+/**
+ * TravelCar — Приложение для учёта расходов в поездках
+ * @author Роман Коваль
+ * @version 2.0.0
+ */
 
-let state = {
-  trips: {},
+// ===== STATE MANAGEMENT =====
+const state = {
+  trips: [],
   activeTrip: null,
-  baseCurrency: "EUR" // для конвертации
+  settings: {
+    theme: localStorage.getItem('tc_theme') || 'light',
+    currency: localStorage.getItem('tc_currency') || 'RUB',
+    language: 'ru'
+  },
+  filters: {
+    search: '',
+    category: '',
+    sortBy: 'date-desc'
+  }
 };
+
+// ===== CONSTANTS =====
+const CATEGORIES = {
+  fuel: { icon: '⛽', label: 'Топливо' },
+  food: { icon: '🍽️', label: 'Еда' },
+  accommodation: { icon: '🏨', label: 'Жильё' },
+  tolls: { icon: '🛣️', label: 'Платные дороги' },
+  repairs: { icon: '🔧', label: 'Ремонт' },
+  entertainment: { icon: '🎭', label: 'Развлечения' },
+  other: { icon: '📦', label: 'Другое' }
+};
+
+const CATEGORY_ICONS = Object.fromEntries(
+  Object.entries(CATEGORIES).map(([k, v]) => [k, v.icon])
+);
+
+// ===== MAP =====
+let map = null;
+let userMarker = null;
+
+// ===== CHARTS =====
+let categoryChart = null;
+let dailyChart = null;
+
+// ===== VOICE =====
+let recognition = null;
+let isListening = false;
+
+// ===== INIT =====document.addEventListener('DOMContentLoaded', async () => {
+  await loadState();
+  applyTheme();
+  initEventListeners();
+  initVoice();
+  updateOnlineStatus();
+  renderAll();
+  
+  // Set default date/time
+  const now = new Date();
+  document.getElementById('expDate').value = now.toISOString().split('T')[0];
+  document.getElementById('expTime').value = now.toTimeString().slice(0,5);
+});
+
+// ===== STORAGE =====
+async function loadState() {
+  try {
+    const saved = localStorage.getItem('travelcar_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.assign(state, parsed);
+    }
+    // Load settings
+    const theme = localStorage.getItem('tc_theme');
+    const currency = localStorage.getItem('tc_currency');
+    if (theme) state.settings.theme = theme;
+    if (currency) state.settings.currency = currency;
+  } catch (e) {
+    console.error('Failed to load state:', e);
+    showToast('Ошибка загрузки данных', 'error');
+  }
+}
 
 function saveState() {
-  localStorage.setItem("travelcar_state", JSON.stringify(state));
-}
-
-function loadState() {
-  const saved = localStorage.getItem("travelcar_state");
-  if (saved) {
-    state = JSON.parse(saved);
-  }
-}
-
-loadState();
-window.addEventListener("load", () => {
-  document.getElementById("loader").style.display = "none";
-});
-async function requestPushPermission() {
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return;
-
-  const reg = await navigator.serviceWorker.getRegistration();
-  if (reg) {
-    reg.showNotification("TravelCar", {
-      body: "Push‑уведомления включены",
-      icon: "travelcar-icon-192.png"
-    });
-  }
-}
-requestPushPermission();
-
-// ===============================
-// 2. Тема (Dark / Light)
-// ===============================
-
-function applyTheme(theme) {
-  document.body.classList.toggle("dark", theme === "dark");
-  localStorage.setItem("theme", theme);
-}
-
-function detectSystemTheme() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
-let savedTheme = localStorage.getItem("theme");
-if (!savedTheme) {
-  savedTheme = detectSystemTheme();
-}
-applyTheme(savedTheme);
-
-// ===============================
-// 3. Страны, флаги, валюты
-// ===============================
-
-const COUNTRY_CONFIG = {
-  IE: { name: "Ireland",  currency: "EUR", flag: "🇮🇪" },
-  TR: { name: "Turkey",   currency: "TRY", flag: "🇹🇷" },
-  PL: { name: "Poland",   currency: "PLN", flag: "🇵🇱" },
-  UA: { name: "Ukraine",  currency: "UAH", flag: "🇺🇦" },
-  GB: { name: "United Kingdom", currency: "GBP", flag: "🇬🇧" },
-  US: { name: "USA",      currency: "USD", flag: "🇺🇸" },
-  CH: { name: "Switzerland", currency: "CHF", flag: "🇨🇭" },
-  DE: { name: "Germany",  currency: "EUR", flag: "🇩🇪" },
-  ES: { name: "Spain",    currency: "EUR", flag: "🇪🇸" },
-  FR: { name: "France",   currency: "EUR", flag: "🇫🇷" },
-  IT: { name: "Italy",    currency: "EUR", flag: "🇮🇹" },
-  NL: { name: "Netherlands", currency: "EUR", flag: "🇳🇱" },
-  PT: { name: "Portugal", currency: "EUR", flag: "🇵🇹" },
-  GR: { name: "Greece",   currency: "EUR", flag: "🇬🇷" },
-  CY: { name: "Cyprus",   currency: "EUR", flag: "🇨🇾" }
-};
-
-// ===============================
-// 4. Иконки категорий
-// ===============================
-
-const CATEGORY_ICONS = {
-  fuel: "⛽",
-  food: "🍔",
-  hotel: "🏨",
-  toll: "🛣️",
-  parking: "🅿️",
-  other: "📦"
-};
-
-// ===============================
-// 5. Курсы валют (упрощённо)
-// ===============================
-
-const RATES_TO_EUR = {
-  EUR: 1,
-  USD: 0.93,
-  GBP: 1.16,
-  TRY: 0.03,
-  PLN: 0.23,
-  UAH: 0.025,
-  CHF: 1.02
-};
-
-function convertToBase(amount, currency) {
-  const rate = RATES_TO_EUR[currency] || 1;
-  return amount * rate;
-}
-
-// ===============================
-// 6. Авто-определение страны
-// ===============================
-
-function detectCurrentCountry() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
-
-          const res = await fetch(url, {
-            headers: { "Accept-Language": "en" }
-          });
-          const data = await res.json();
-
-          const codeRaw =
-            (data.address && (data.address.country_code || data.address.countryCode)) || "";
-          const code = codeRaw.toUpperCase();
-
-          const cfg = COUNTRY_CONFIG[code];
-          if (!cfg) {
-            resolve(null);
-            return;
-          }
-
-          resolve({
-            countryCode: code,
-            name: cfg.name,
-            currency: cfg.currency,
-            flag: cfg.flag
-          });
-        } catch (e) {
-          resolve(null);
-        }
-      },
-      () => {
-        resolve(null);
-      }
-    );
-  });
-}
-
-// ===============================
-// 7. Reverse geocoding для расхода
-// ===============================
-
-async function reverseGeocode(lat, lon) {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
-    const res = await fetch(url, {
-      headers: { "Accept-Language": "en" }
-    });
-    const data = await res.json();
-
-    const city =
-      data.address.city ||
-      data.address.town ||
-      data.address.village ||
-      data.address.hamlet ||
-      "";
-    const country = data.address.country || "";
-    const countryCode =
-      (data.address.country_code || data.address.countryCode || "").toUpperCase();
-
-    return {
-      city,
-      country,
-      countryCode
-    };
+    localStorage.setItem('travelcar_data', JSON.stringify(state));
+    // Request background sync if offline
+    if ('serviceWorker' in navigator && !navigator.onLine) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.sync?.register('sync-expenses');
+      });
+    }
   } catch (e) {
-    return null;
+    console.error('Failed to save state:', e);
+    showToast('Ошибка сохранения', 'error');
   }
 }
 
-// ===============================
-// 8. Статическая карта OSM
-// ===============================
-
-function getStaticMapURL(lat, lon, zoom = 14) {
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=400x300&markers=${lat},${lon},red-pushpin`;
+// ===== THEME =====
+function applyTheme() {  document.body.classList.toggle('dark', state.settings.theme === 'dark');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', 
+    state.settings.theme === 'dark' ? '#1a1a2e' : '#4a90e2');
 }
 
-// ===============================
-// 9. Управление поездками
-// ===============================
+function toggleTheme() {
+  state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('tc_theme', state.settings.theme);
+  applyTheme();
+  showToast(`Тема: ${state.settings.theme === 'dark' ? '🌙 Тёмная' : '☀️ Светлая'}`, 'info');
+}
 
-function createTrip(name = "Новая поездка", countryInfo = null) {
-  const id = "trip_" + Date.now();
+// ===== EVENT LISTENERS =====
+function initEventListeners() {
+  // Theme & Backup
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+  document.getElementById('backupBtn').addEventListener('click', backupData);
+  
+  // Trip Management
+  document.getElementById('tripSelect').addEventListener('change', handleTripSelect);
+  document.getElementById('newTripBtn').addEventListener('click', createNewTrip);
+  
+  // Expense Form
+  document.getElementById('addExpenseForm').addEventListener('submit', handleAddExpense);
+  document.getElementById('geoBtn').addEventListener('click', getCurrentLocation);
+  document.getElementById('expPhoto').addEventListener('change', handlePhotoSelect);
+  document.getElementById('voiceBtn').addEventListener('click', toggleVoiceInput);
+  
+  // Filters
+  document.getElementById('searchExpenses').addEventListener('input', (e) => {
+    state.filters.search = e.target.value.toLowerCase();
+    renderExpenses();
+  });
+  document.getElementById('filterCategory').addEventListener('change', (e) => {
+    state.filters.category = e.target.value;
+    renderExpenses();
+  });
+  document.getElementById('sortBy').addEventListener('change', (e) => {
+    state.filters.sortBy = e.target.value;
+    renderExpenses();
+  });
+  
+  // Export
+  document.getElementById('exportCSV').addEventListener('click', () => exportData('csv'));
+  document.getElementById('exportJSON').addEventListener('click', () => exportData('json'));
+  document.getElementById('exportPDF').addEventListener('click', () => exportData('pdf'));
+  
+  // Map
+  document.getElementById('locateBtn').addEventListener('click', centerMapOnUser);
+    // FAB
+  document.getElementById('addExpenseFab').addEventListener('click', () => {
+    document.getElementById('expenseForm').scrollIntoView({ behavior: 'smooth' });
+  });
+  
+  // Online status
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+}
 
-  const currency = countryInfo?.currency || "EUR";
-  const displayName =
-    name ||
-    (countryInfo ? `${countryInfo.name} Trip` : "Новая поездка");
-
-  state.trips[id] = {
-    id,
-    name: displayName,
-    currency,
+// ===== TRIPS =====
+async function createNewTrip() {
+  const name = prompt('Название поездки:', 'Поездка ' + new Date().toLocaleDateString());
+  if (!name) return;
+  
+  const country = await detectCountry();
+  const trip = {
+    id: Date.now().toString(),
+    name,
+    country: country || 'Не определено',
+    startDate: new Date().toISOString(),
+    endDate: '',
+    currency: state.settings.currency,
     budget: 0,
     expenses: [],
-    country: countryInfo?.name || null,
-    countryCode: countryInfo?.countryCode || null,
-    flag: countryInfo?.flag || null
+    createdAt: new Date().toISOString()
   };
-
-  state.activeTrip = id;
+  
+  state.trips.push(trip);
+  state.activeTrip = trip.id;
   saveState();
-  renderTripSelector();
   renderAll();
+  showToast('🚗 Поездка создана!', 'success');
 }
 
-function renderTripSelector() {
-  const select = document.getElementById("tripSelect");
-  select.innerHTML = "";
-
-  Object.values(state.trips).forEach(trip => {
-    const opt = document.createElement("option");
-    opt.value = trip.id;
-
-    const flag = trip.flag ? trip.flag + " " : "";
-    const currency = trip.currency ? ` (${trip.currency})` : "";
-
-    opt.textContent = `${flag}${trip.name}${currency}`;
-
-    if (trip.id === state.activeTrip) opt.selected = true;
-    select.appendChild(opt);
-  });
+async function handleTripSelect(e) {
+  const tripId = e.target.value;
+  if (tripId === '') {
+    await createNewTrip();
+  } else {
+    state.activeTrip = tripId;
+    renderAll();
+  }
 }
 
-// ===============================
-// 10. Добавление расходов (с фото)
-// ===============================
+// ===== EXPENSES =====
+async function handleAddExpense(e) {
+  e.preventDefault();
+  if (!state.activeTrip) {
+    showToast('Сначала создайте поездку', 'error');    return;
+  }
+  
+  const form = e.target;
+  const photoFile = document.getElementById('expPhoto').files[0];
+  
+  let photoData = null;
+  if (photoFile) {
+    try {
+      photoData = await compressImage(photoFile);
+    } catch (err) {
+      console.error('Photo compress error:', err);
+      showToast('Ошибка обработки фото', 'error');
+      return;
+    }
+  }
+  
+  const expense = {
+    id: Date.now().toString(),
+    title: document.getElementById('expTitle').value,
+    amount: parseFloat(document.getElementById('expAmount').value),
+    category: document.getElementById('expCategory').value,
+    date: document.getElementById('expDate').value + 'T' + document.getElementById('expTime').value,
+    location: document.getElementById('expLocation').value,
+    photo: photoData,
+    createdAt: new Date().toISOString()
+  };
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (trip) {
+    trip.expenses.push(expense);
+    saveState();
+    renderAll();
+    form.reset();
+    document.getElementById('photoPreview').innerHTML = '';
+    document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('expTime').value = new Date().toTimeString().slice(0,5);
+    showToast('✅ Расход добавлен', 'success');
+  }
+}
 
-async function readFileAsDataURL(file) {
+// ===== PHOTO COMPRESSION =====
+function compressImage(file, maxWidth = 1024, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-async function addExpense(title, amount, category = "other") {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-
-  let lat = null;
-  let lon = null;
-  let locationInfo = null;
-
-  if (navigator.geolocation) {
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 8000
-        });
-      });
-
-      lat = pos.coords.latitude;
-      lon = pos.coords.longitude;
-
-      locationInfo = await reverseGeocode(lat, lon);
-    } catch (e) {}
-  }
-
-  let photoData = null;
-  const photoInput = document.getElementById("expPhoto");
-  if (photoInput.files && photoInput.files[0]) {
-    try {
-      photoData = await readFileAsDataURL(photoInput.files[0]);
-    } catch (e) {
-      photoData = null;
-    }
-  }
-
-  const exp = {
-    id: "exp_" + Date.now(),
-    title,
-    amount: parseFloat(amount),
-    category,
-    date: new Date().toISOString(),
-    lat,
-    lon,
-    location: locationInfo
-      ? `${locationInfo.city || ""}${locationInfo.city ? ", " : ""}${locationInfo.country || ""}`
-      : null,
-    countryCode: locationInfo?.countryCode || null,
-    photo: photoData
+function handlePhotoSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById('photoPreview');
+    preview.innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
   };
-
-  trip.expenses.push(exp);
-
-  saveState();
-  renderAll();
-  checkBudgetNotification(trip);
+  reader.readAsDataURL(file);
 }
 
-// ===============================
-// 11. Рендер расходов
-// ===============================
+// ===== GEOLOCATION =====
+async function getCurrentLocation() {
+  if (!navigator.geolocation) {
+    showToast('Геолокация не поддерживается', 'error');
+    return;
+  }
+  
+  showToast('📍 Определение местоположения...', 'info');
+  
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      });
+    });
+        const { latitude, longitude } = position.coords;
+    document.getElementById('expLocation').value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    
+    // Reverse geocoding (simplified)
+    const address = await reverseGeocode(latitude, longitude);
+    if (address) {
+      document.getElementById('expLocation').value = address;
+    }
+    
+    // Update map
+    if (map) {
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([latitude, longitude]).addTo(map)
+        .bindPopup('📍 Вы здесь').openPopup();
+      map.setView([latitude, longitude], 15);
+    }
+    
+    showToast('✅ Местоположение определено', 'success');
+  } catch (err) {
+    console.error('Geolocation error:', err);
+    showToast('❌ Не удалось определить местоположение', 'error');
+  }
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`);
+    const data = await res.json();
+    return data.display_name;
+  } catch {
+    return null;
+  }
+}
+
+async function detectCountry() {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    return data.country_name || null;
+  } catch {
+    return null;
+  }
+}
+
+// ===== RENDERING =====
+function renderAll() {
+  renderTrips();
+  renderTripInfo();
+  renderMap();
+  renderExpenses();  renderAnalytics();
+  updateUIVisibility();
+}
+
+function renderTrips() {
+  const select = document.getElementById('tripSelect');
+  const current = select.value;
+  
+  select.innerHTML = '<option value="">+ Новая поездка</option>' +
+    state.trips.map(trip => 
+      `<option value="${trip.id}" ${trip.id === state.activeTrip ? 'selected' : ''}>
+        ${trip.name} (${trip.country})
+      </option>`
+    ).join('');
+  
+  select.value = current || '';
+}
+
+function renderTripInfo() {
+  const section = document.getElementById('tripInfo');
+  if (!state.activeTrip) {
+    section.classList.add('hidden');
+    return;
+  }
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return;
+  
+  document.getElementById('tripTitle').textContent = trip.name;
+  document.getElementById('tripDates').textContent = 
+    `📅 ${new Date(trip.startDate).toLocaleDateString()} — ${trip.endDate ? new Date(trip.endDate).toLocaleDateString() : '...'}`;
+  document.getElementById('tripLocation').textContent = `📍 ${trip.country}`;
+  document.getElementById('tripCurrency').textContent = trip.currency;
+  
+  // Budget
+  const budgetInput = document.getElementById('tripBudget');
+  budgetInput.value = trip.budget || '';
+  budgetInput.addEventListener('change', (e) => {
+    trip.budget = parseFloat(e.target.value) || 0;
+    saveState();
+    renderBudgetProgress(trip);
+  });
+  
+  renderBudgetProgress(trip);
+  section.classList.remove('hidden');
+}
+
+function renderBudgetProgress(trip) {
+  const total = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
+  const budget = trip.budget || 0;  const bar = document.getElementById('budgetBar');
+  const status = document.getElementById('budgetStatus');
+  
+  if (budget > 0) {
+    const percent = Math.min((total / budget) * 100, 100);
+    bar.style.width = `${percent}%`;
+    bar.className = 'budget-bar' + (percent > 90 ? ' danger' : percent > 70 ? ' warning' : '');
+    status.textContent = `${total.toFixed(2)} / ${budget} ${trip.currency} (${percent.toFixed(0)}%)`;
+    
+    if (total > budget) {
+      showToast('⚠️ Превышен бюджет!', 'error');
+    }
+  } else {
+    bar.style.width = '0%';
+    status.textContent = `Потрачено: ${total.toFixed(2)} ${trip.currency}`;
+  }
+}
+
+function renderMap() {
+  const section = document.getElementById('mapSection');
+  if (!state.activeTrip) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+  
+  if (!map) {
+    map = L.map('map').setView([55.75, 37.61], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(map);
+  }
+  
+  // Clear existing markers
+  map.eachLayer(layer => {
+    if (layer instanceof L.Marker) map.removeLayer(layer);
+  });
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return;
+  
+  // Add expense markers
+  trip.expenses.filter(e => e.location && e.location.includes(',')).forEach(exp => {
+    const [lat, lon] = exp.location.split(',').map(Number);
+    if (!isNaN(lat) && !isNaN(lon)) {
+      L.marker([lat, lon])
+        .bindPopup(`<b>${exp.title}</b><br>${CATEGORIES[exp.category]?.icon} ${exp.category}<br>${exp.amount} ${trip.currency}`)
+        .addTo(map);
+    }  });
+  
+  // Fit bounds
+  const markers = trip.expenses
+    .filter(e => e.location?.includes(','))
+    .map(e => e.location.split(',').map(Number))
+    .filter(([lat, lon]) => !isNaN(lat) && !isNaN(lon));
+    
+  if (markers.length > 0) {
+    const bounds = L.latLngBounds(markers);
+    map.fitBounds(bounds.pad(0.2));
+  }
+}
 
 function renderExpenses() {
-  const container = document.getElementById("expenseList");
-  container.innerHTML = "";
-
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-
-  trip.expenses.forEach(exp => {
-    const div = document.createElement("div");
-    div.className = "expense-item";
-
-    const locationText = exp.location ? exp.location : "Место не определено";
-    const icon = CATEGORY_ICONS[exp.category] || "📦";
-
-    div.innerHTML = `
-      <div class="exp-row">
-        <div class="exp-left">
-          <div class="exp-icon">${icon}</div>
-          <div class="exp-info">
-            <div class="exp-title">${exp.title}</div>
-            <div class="exp-location">${locationText}</div>
+  const container = document.getElementById('expenseList');
+  const countEl = document.getElementById('expenseCount');
+  
+  if (!state.activeTrip) {
+    container.innerHTML = '<div class="empty-state">Выберите или создайте поездку</div>';
+    countEl.textContent = '0';
+    return;
+  }
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return;
+  
+  // Filter & sort
+  let expenses = [...trip.expenses];
+  
+  if (state.filters.search) {
+    expenses = expenses.filter(e => 
+      e.title.toLowerCase().includes(state.filters.search) ||
+      e.location?.toLowerCase().includes(state.filters.search)
+    );
+  }
+  if (state.filters.category) {
+    expenses = expenses.filter(e => e.category === state.filters.category);
+  }
+  
+  expenses.sort((a, b) => {
+    switch(state.filters.sortBy) {
+      case 'date-asc': return new Date(a.date) - new Date(b.date);
+      case 'amount-desc': return b.amount - a.amount;
+      case 'amount-asc': return a.amount - b.amount;
+      default: return new Date(b.date) - new Date(a.date);
+    }
+  });
+  
+  countEl.textContent = expenses.length;  
+  if (expenses.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div>💰</div>
+        <p>Нет расходов</p>
+        <p style="font-size:12px;color:var(--text-secondary)">Добавьте первый расход!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = expenses.map(exp => {
+    const cat = CATEGORIES[exp.category] || CATEGORIES.other;
+    const date = new Date(exp.date).toLocaleString();
+    return `
+      <div class="expense-item" data-id="${exp.id}">
+        <div class="exp-row">
+          <div class="exp-left">
+            <span class="exp-icon">${cat.icon}</span>
+            <div class="exp-info">
+              <span class="exp-title">${exp.title}</span>
+              <span class="exp-location">${exp.location || 'Место не указано'}</span>
+            </div>
+          </div>
+          <div class="exp-right">
+            <span class="exp-amount">${exp.amount.toFixed(2)} ${trip.currency}</span>
+            <span class="exp-date">${date}</span>
           </div>
         </div>
-
-        <div class="exp-right">
-          <div class="exp-amount">${exp.amount} ${trip.currency}</div>
-          <div class="exp-date">${new Date(exp.date).toLocaleString()}</div>
+        ${exp.photo ? `<div style="margin-top:8px"><img src="${exp.photo}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" onclick="viewPhoto('${exp.photo}')"></div>` : ''}
+        <div class="exp-actions">
+          <button class="btn-edit" onclick="editExpense('${exp.id}')">✏️</button>
+          <button class="btn-delete" onclick="deleteExpense('${exp.id}')">🗑️</button>
         </div>
       </div>
     `;
-
-    div.addEventListener("click", () => openExpenseModal(exp, trip));
-
-    container.appendChild(div);
-  });
+  }).join('');
 }
 
-// ===============================
-// 12. Модалка расхода
-// ===============================
+// ===== EXPENSE ACTIONS =====
+window.editExpense = function(expenseId) {
+  if (!state.activeTrip) return;
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  const exp = trip?.expenses.find(e => e.id === expenseId);
+  if (!exp) return;
+  
+  showModal(`
+    <h2>✏️ Редактировать</h2>
+    <form id="editForm">      <label>Название</label>
+      <input type="text" id="editTitle" value="${exp.title}" required>
+      <label>Сумма</label>
+      <input type="number" id="editAmount" value="${exp.amount}" step="0.01" required>
+      <label>Категория</label>
+      <select id="editCategory">
+        ${Object.entries(CATEGORIES).map(([k,v]) => 
+          `<option value="${k}" ${k===exp.category?'selected':''}>${v.icon} ${v.label}</option>`
+        ).join('')}
+      </select>
+      <label>Место</label>
+      <input type="text" id="editLocation" value="${exp.location||''}">
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px">💾 Сохранить</button>
+    </form>
+  `);
+  
+  document.getElementById('editForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    exp.title = document.getElementById('editTitle').value;
+    exp.amount = parseFloat(document.getElementById('editAmount').value);
+    exp.category = document.getElementById('editCategory').value;
+    exp.location = document.getElementById('editLocation').value;
+    saveState();
+    renderAll();
+    closeModal();
+    showToast('✅ Изменения сохранены', 'success');
+  });
+};
 
-const expenseModal = document.getElementById("expenseModal");
-const closeModalBtn = document.getElementById("closeModal");
-
-const modalTitle = document.getElementById("modalTitle");
-const modalAmount = document.getElementById("modalAmount");
-const modalCategory = document.getElementById("modalCategory");
-const modalDate = document.getElementById("modalDate");
-const modalLocation = document.getElementById("modalLocation");
-const modalMap = document.getElementById("modalMap");
-const modalPhoto = document.getElementById("modalPhoto");
-const modalPhotoWrapper = document.getElementById("modalPhotoWrapper");
-
-function openExpenseModal(exp, trip) {
-  modalTitle.textContent = `${CATEGORY_ICONS[exp.category] || "📦"}  ${exp.title}`;
-  modalAmount.textContent = `${exp.amount} ${trip.currency}`;
-  modalCategory.textContent = exp.category.toUpperCase();
-  modalDate.textContent = new Date(exp.date).toLocaleString();
-  modalLocation.textContent = exp.location || "Место не определено";
-
-  if (exp.photo) {
-    modalPhotoWrapper.style.display = "block";
-    modalPhoto.src = exp.photo;
-  } else {
-    modalPhotoWrapper.style.display = "none";
+window.deleteExpense = function(expenseId) {
+  if (!confirm('Удалить этот расход?')) return;
+  if (!state.activeTrip) return;
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  const idx = trip?.expenses.findIndex(e => e.id === expenseId);
+  
+  if (idx > -1) {
+    trip.expenses.splice(idx, 1);
+    saveState();
+    renderAll();
+    showToast('🗑️ Расход удалён', 'success');
   }
+};
 
-  modalMap.innerHTML = "";
+window.viewPhoto = function(photoData) {
+  showModal(`<img src="${photoData}" style="width:100%;border-radius:8px"><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Закрыть</button>`);
+};
 
-  if (exp.lat && exp.lon) {
-    const img = document.createElement("img");
-    img.src = getStaticMapURL(exp.lat, exp.lon);
-    img.alt = "Map";
-    img.style.width = "100%";
-    img.style.borderRadius = "10px";
-    modalMap.appendChild(img);
-  } else {
-    modalMap.textContent = "Координаты не сохранены";
+// ===== ANALYTICS =====
+function renderAnalytics() {  const section = document.getElementById('analytics');
+  if (!state.activeTrip) {
+    section.classList.add('hidden');
+    return;
   }
-
-  expenseModal.classList.remove("hidden");
-}
-
-closeModalBtn.addEventListener("click", () => {
-  expenseModal.classList.add("hidden");
-});
-
-expenseModal.addEventListener("click", (e) => {
-  if (e.target === expenseModal) {
-    expenseModal.classList.add("hidden");
+  section.classList.remove('hidden');
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip || trip.expenses.length === 0) {
+    document.querySelector('#analytics canvas').closest('.analytics').innerHTML = '<p style="text-align:center;color:var(--text-secondary)">Нет данных для аналитики</p>';
+    return;
   }
-});
-
-// ===============================
-// 13. Экспорт JSON
-// ===============================
-
-function exportJSON() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-  const dataStr = JSON.stringify(trip, null, 2);
-
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${trip.name.replace(/[^a-z0-9]/gi, "_")}.json`;
-  a.click();
-
-  URL.revokeObjectURL(url);
+  
+  // Stats
+  const total = trip.expenses.reduce((s,e) => s + e.amount, 0);
+  const days = new Set(trip.expenses.map(e => e.date.slice(0,10))).size || 1;
+  const byCategory = trip.expenses.reduce((acc, e) => {
+    acc[e.category] = (acc[e.category] || 0) + e.amount;
+    return acc;
+  }, {});
+  const topCat = Object.entries(byCategory).sort((a,b) => b[1]-a[1])[0]?.[0];
+  
+  document.getElementById('statTotal').textContent = total.toFixed(0);
+  document.getElementById('statAvg').textContent = (total/days).toFixed(0);
+  document.getElementById('statCount').textContent = trip.expenses.length;
+  document.getElementById('statTop').textContent = topCat ? CATEGORIES[topCat]?.icon : '-';
+  document.querySelectorAll('.currency').forEach(el => el.textContent = trip.currency);
+  
+  // Charts
+  renderCategoryChart(byCategory, trip.currency);
+  renderDailyChart(trip.expenses, trip.currency);
 }
 
-// ===============================
-// 14. Экспорт CSV
-// ===============================
-
-function exportCSV() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-  const rows = [
-    ["Title", "Amount", "Currency", "Category", "Date", "Location", "Lat", "Lon"]
-  ];
-
-  trip.expenses.forEach(exp => {
-    rows.push([
-      exp.title,
-      exp.amount,
-      trip.currency,
-      exp.category,
-      exp.date,
-      exp.location || "",
-      exp.lat || "",
-      exp.lon || ""
-    ]);
-  });
-
-  const csvContent = rows.map(r => r.join(",")).join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${trip.name.replace(/[^a-z0-9]/gi, "_")}.csv`;
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
-
-// ===============================
-// 15. Экспорт PDF
-// ===============================
-
-async function exportPDF() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(20);
-  doc.text("TravelCar Report", 14, 20);
-
-  doc.setFontSize(14);
-  doc.text(`Trip: ${trip.name}`, 14, 35);
-  doc.text(`Currency: ${trip.currency}`, 14, 45);
-
-  const tableData = trip.expenses.map(exp => [
-    exp.title,
-    exp.amount + " " + trip.currency,
-    exp.category,
-    new Date(exp.date).toLocaleString(),
-    exp.location || "",
-  ]);
-
-  doc.autoTable({
-    head: [["Title", "Amount", "Category", "Date", "Location"]],
-    body: tableData,
-    startY: 55,
-    styles: { fontSize: 10 }
-  });
-
-  const total = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
-  const finalY = doc.lastAutoTable.finalY + 15;
-
-  doc.setFontSize(14);
-  doc.text(`Total: ${total} ${trip.currency}`, 14, finalY);
-
-  doc.save(`${trip.name.replace(/[^a-z0-9]/gi, "_")}.pdf`);
-}
-
-// ===============================
-// 16. Share API
-// ===============================
-
-async function shareTrip() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-
-  let text = `🚗 TravelCar Trip: ${trip.name}\n`;
-  text += `Валюта: ${trip.currency}\n`;
-  text += `Всего расходов: ${trip.expenses.length}\n\n`;
-
-  let total = 0;
-
-  trip.expenses.forEach(exp => {
-    total += exp.amount;
-    text += `• ${exp.title} — ${exp.amount} ${trip.currency}\n`;
-    if (exp.location) text += `  📍 ${exp.location}\n`;
-  });
-
-  text += `\nИтого: ${total} ${trip.currency}`;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: "TravelCar Trip",
-        text
-      });
-    } catch (e) {
-      console.log("Share canceled");
-    }
-  } else {
-    alert("Ваш браузер не поддерживает Share API");
-  }
-}
-
-// ===============================
-// 17. Аналитика (Chart.js)
-// ===============================
-
-let categoryChart = null;
-let dailyChart = null;
-
-function buildAnalytics() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-  const expenses = trip.expenses;
-
-  const byCategory = {};
-  const byDay = {};
-
-  expenses.forEach(exp => {
-    const cat = exp.category || "other";
-    byCategory[cat] = (byCategory[cat] || 0) + exp.amount;
-
-    const day = new Date(exp.date).toISOString().slice(0, 10);
-    byDay[day] = (byDay[day] || 0) + exp.amount;
-  });
-
-  const catLabels = Object.keys(byCategory);
-  const catData = catLabels.map(k => byCategory[k]);
-
-  const dayLabels = Object.keys(byDay).sort();
-  const dayData = dayLabels.map(k => byDay[k]);
-
-  const catCtx = document.getElementById("categoryChart").getContext("2d");
-  const dayCtx = document.getElementById("dailyChart").getContext("2d");
-
+function renderCategoryChart(data, currency) {
+  const ctx = document.getElementById('categoryChart');
+  if (!ctx) return;
+  
   if (categoryChart) categoryChart.destroy();
+  
+  categoryChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(data).map(k => CATEGORIES[k]?.label || k),
+      datasets: [{
+        data: Object.values(data),
+        backgroundColor: ['#4a90e2','#27ae60','#f39c12','#e74c3c','#9b59b6','#1abc9c','#34495e']
+      }]
+    },
+    options: {
+      responsive: true,      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: getComputedStyle(document.body).color } },
+        title: { display: true, text: 'Расходы по категориям', color: getComputedStyle(document.body).color }
+      }
+    }
+  });
+}
+
+function renderDailyChart(expenses, currency) {
+  const ctx = document.getElementById('dailyChart');
+  if (!ctx) return;
+  
   if (dailyChart) dailyChart.destroy();
-
-  categoryChart = new Chart(catCtx, {
-    type: "doughnut",
+  
+  const byDay = expenses.reduce((acc, e) => {
+    const day = e.date.slice(0,10);
+    acc[day] = (acc[day] || 0) + e.amount;
+    return acc;
+  }, {});
+  
+  dailyChart = new Chart(ctx, {
+    type: 'bar',
     data: {
-      labels: catLabels,
+      labels: Object.keys(byDay).sort(),
       datasets: [{
-        data: catData,
-        backgroundColor: ["#4a90e2","#27ae60","#e67e22","#9b59b6","#f1c40f","#95a5a6"]
+        label: `Расходы (${currency})`,
+        data: Object.keys(byDay).sort().map(d => byDay[d]),
+        backgroundColor: '#4a90e2'
       }]
     },
     options: {
-      plugins: { legend: { position: "bottom" } }
-    }
-  });
-
-  dailyChart = new Chart(dayCtx, {
-    type: "line",
-    data: {
-      labels: dayLabels,
-      datasets: [{
-        label: "Расходы по дням",
-        data: dayData,
-        borderColor: "#4a90e2",
-        fill: false,
-        tension: 0.2
-      }]
-    },
-    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Расходы по дням', color: getComputedStyle(document.body).color }
+      },
       scales: {
-        x: { ticks: { maxRotation: 45, minRotation: 0 } }
+        y: { beginAtZero: true, ticks: { color: getComputedStyle(document.body).color } },
+        x: { ticks: { color: getComputedStyle(document.body).color, maxRotation: 45 } }
       }
     }
   });
-
-  const baseSummary = document.getElementById("baseCurrencySummary");
-  const totalBase = expenses.reduce(
-    (sum, e) => sum + convertToBase(e.amount, trip.currency),
-    0
-  );
-  baseSummary.textContent = `Итого в базовой валюте (EUR): ${totalBase.toFixed(2)} €`;
 }
 
-// ===============================
-// 18. Интерактивная карта (Leaflet)
-// ===============================
-
-let mapInstance = null;
-let mapMarkers = [];
-
-function buildMap() {
-  if (!state.activeTrip) return;
-
-  const trip = state.trips[state.activeTrip];
-  const expenses = trip.expenses.filter(e => e.lat && e.lon);
-
-  const mapContainer = document.getElementById("tripMap");
-  if (!mapContainer) return;
-
-  if (!mapInstance) {
-    mapInstance = L.map("tripMap");
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19
-    }).addTo(mapInstance);
+// ===== EXPORT =====
+async function exportData(format) {
+  if (!state.activeTrip) {
+    showToast('Выберите поездку', 'error');    return;
   }
-
-  mapMarkers.forEach(m => mapInstance.removeLayer(m));
-  mapMarkers = [];
-
-  if (expenses.length === 0) {
-    mapInstance.setView([51.5, -0.09], 3);
-    return;
-  }
-
-  const bounds = [];
-
-  expenses.forEach(exp => {
-    const marker = L.marker([exp.lat, exp.lon]).addTo(mapInstance);
-    marker.bindPopup(`${exp.title}<br>${exp.amount} ${trip.currency}`);
-    mapMarkers.push(marker);
-    bounds.push([exp.lat, exp.lon]);
-  });
-
-  mapInstance.fitBounds(bounds, { padding: [20,20] });
-}
-
-// ===============================
-// 19. Бюджет + уведомления
-// ===============================
-
-function checkBudgetNotification(trip) {
-  if (!trip.budget || !("Notification" in window)) return;
-
-  const total = trip.expenses.reduce((s, e) => s + e.amount, 0);
-  if (total < trip.budget) return;
-
-  if (Notification.permission === "granted") {
-    new Notification("TravelCar", {
-      body: `Бюджет превышен: ${total} / ${trip.budget} ${trip.currency}`
-    });
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(p => {
-      if (p === "granted") {
-        new Notification("TravelCar", {
-          body: `Бюджет превышен: ${total} / ${trip.budget} ${trip.currency}`
-        });
-      }
-    });
+  
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return;
+  
+  try {
+    if (format === 'csv') {
+      const headers = ['Дата', 'Название', 'Категория', 'Сумма', 'Валюта', 'Место'];
+      const rows = trip.expenses.map(e => [
+        new Date(e.date).toLocaleString(),
+        e.title,
+        CATEGORIES[e.category]?.label || e.category,
+        e.amount,
+        trip.currency,
+        e.location || ''
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      downloadFile(csv, `${trip.name}_expenses.csv`, 'text/csv');
+      
+    } else if (format === 'json') {
+      downloadFile(JSON.stringify(trip, null, 2), `${trip.name}_data.json`, 'application/json');
+      
+    } else if (format === 'pdf') {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text(`Отчёт: ${trip.name}`, 14, 20);
+      doc.setFontSize(10);
+      doc.text(`Период: ${new Date(trip.startDate).toLocaleDateString()} — ${trip.endDate ? new Date(trip.endDate).toLocaleDateString() : '...'}`, 14, 30);
+      
+      let y = 45;
+      const total = trip.expenses.reduce((s,e) => s + e.amount, 0);
+      
+      trip.expenses.forEach((e, i) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.text(`${i+1}. ${e.title} — ${e.amount} ${trip.currency}`, 14, y);
+        y += 8;
+      });
+      
+      doc.line(14, y, 200, y);
+      y += 10;
+      doc.setFontSize(12);
+      doc.text(`Итого: ${total} ${trip.currency}`, 14, y);
+      
+      doc.save(`${trip.name}_report.pdf`);
+    }
+    
+    showToast(`📤 Экспорт в ${format.toUpperCase()} завершён`, 'success');  } catch (err) {
+    console.error('Export error:', err);
+    showToast('Ошибка экспорта', 'error');
   }
 }
 
-// ===============================
-// 20. Бэкап всех данных
-// ===============================
-
-function exportAllData() {
-  const dataStr = JSON.stringify(state, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
-  a.download = `travelcar_backup.json`;
+  a.download = filename;
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
-function importAllData(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const imported = JSON.parse(e.target.result);
-      state = imported;
-      saveState();
-      renderAll();
-    } catch (err) {
-      alert("Ошибка импорта");
-    }
+// ===== BACKUP =====
+function backupData() {
+  const data = {
+    version: '2.0.0',
+    exportedAt: new Date().toISOString(),
+    state: state
   };
-  reader.readAsText(file);
+  downloadFile(JSON.stringify(data, null, 2), `travelcar_backup_${Date.now()}.json`, 'application/json');
+  showToast('💾 Бэкап создан', 'success');
 }
 
-// ===============================
-// 21. Голосовой ввод
-// ===============================
-
-function startVoiceInput() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Голосовой ввод не поддерживается");
-    return;
-  }
-
-  const rec = new SpeechRecognition();
-  rec.lang = "ru-RU";
-  rec.interimResults = false;
-  rec.maxAlternatives = 1;
-
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    const titleInput = document.getElementById("expTitle");
-    const amountInput = document.getElementById("expAmount");
-
-    const match = text.match(/(\d+([\.,]\d+)?)/);
-    if (match) {
-      amountInput.value = match[1].replace(",", ".");
-      titleInput.value = text.replace(match[0], "").trim();
-    } else {
-      titleInput.value = text;
-    }
-  };
-
-  rec.start();
-}
-
-// ===============================
-// 22. Главный рендер
-// ===============================
-
-function renderAll() {
-  renderTripSelector();
-  renderExpenses();
-  buildAnalytics();
-  buildMap();
-
-  if (state.activeTrip) {
-    const trip = state.trips[state.activeTrip];
-    const budgetInput = document.getElementById("tripBudget");
-    budgetInput.value = trip.budget || "";
+// ===== VOICE INPUT =====
+function initVoice() {
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      document.getElementById('expTitle').value = transcript;
+      showToast('🎤 Распознано: ' + transcript, 'info');
+    };
+    
+    recognition.onerror = (e) => {
+      console.error('Voice error:', e.error);
+      showToast('Ошибка распознавания', 'error');
+      stopListening();
+    };
+    
+    recognition.onend = stopListening;
+  } else {    document.getElementById('voiceBtn').style.display = 'none';
   }
 }
 
-// ===============================
-// 23. Обработчики
-// ===============================
-
-document.getElementById("tripSelect").addEventListener("change", (e) => {
-  state.activeTrip = e.target.value;
-  saveState();
-  renderAll();
-});
-
-document.getElementById("newTripBtn").addEventListener("click", async () => {
-  const info = await detectCurrentCountry();
-
-  const suggestedName = info
-    ? `${info.name} Trip`
-    : "Новая поездка";
-
-  const name = prompt("Название поездки:", suggestedName);
-  if (name) {
-    createTrip(name, info || null);
+function toggleVoiceInput() {
+  if (!recognition) return;
+  
+  if (isListening) {
+    recognition.stop();
+  } else {
+    recognition.start();
+    isListening = true;
+    document.getElementById('voiceBtn').classList.add('recording');
+    document.getElementById('voiceStatus').textContent = '🎙️ Слушаю...';
   }
-});
-
-const titleInput = document.getElementById("expTitle");
-const amountInput = document.getElementById("expAmount");
-const categorySelect = document.getElementById("expCategory");
-const addBtn = document.getElementById("addExpenseBtn");
-
-addBtn.addEventListener("click", async () => {
-  const title = titleInput.value.trim();
-  const amount = amountInput.value.trim();
-  const category = categorySelect.value;
-
-  if (!title || !amount) {
-    alert("Введите название и сумму");
-    return;
-  }
-
-  await addExpense(title, amount, category);
-
-  titleInput.value = "";
-  amountInput.value = "";
-  document.getElementById("expPhoto").value = "";
-});
-
-document.getElementById("exportCSV").addEventListener("click", exportCSV);
-document.getElementById("exportJSON").addEventListener("click", exportJSON);
-document.getElementById("exportPDF").addEventListener("click", exportPDF);
-document.getElementById("shareTrip").addEventListener("click", shareTrip);
-
-document.getElementById("toggleTheme").addEventListener("click", () => {
-  const current = document.body.classList.contains("dark") ? "dark" : "light";
-  const next = current === "dark" ? "light" : "dark";
-  applyTheme(next);
-});
-
-document.getElementById("saveBudgetBtn").addEventListener("click", () => {
-  if (!state.activeTrip) return;
-  const trip = state.trips[state.activeTrip];
-  const val = parseFloat(document.getElementById("tripBudget").value);
-  trip.budget = isNaN(val) ? 0 : val;
-  saveState();
-  checkBudgetNotification(trip);
-});
-
-document.getElementById("exportAllBtn").addEventListener("click", exportAllData);
-document.getElementById("importAllInput").addEventListener("change", (e) => {
-  if (e.target.files && e.target.files[0]) {
-    importAllData(e.target.files[0]);
-  }
-});
-
-document.getElementById("voiceInputBtn").addEventListener("click", startVoiceInput);
-
-// ===============================
-// 24. Инициализация
-// ===============================
-
-if (Object.keys(state.trips).length === 0) {
-  createTrip("Первая поездка", null);
-} else {
-  renderAll();
 }
+
+function stopListening() {
+  isListening = false;
+  document.getElementById('voiceBtn').classList.remove('recording');
+  document.getElementById('voiceStatus').textContent = '';
+}
+
+// ===== UI HELPERS =====
+function updateUIVisibility() {
+  const hasTrip = !!state.activeTrip;
+  document.getElementById('tripInfo').classList.toggle('hidden', !hasTrip);
+  document.getElementById('mapSection').classList.toggle('hidden', !hasTrip);
+  document.getElementById('expenseForm').classList.toggle('hidden', !hasTrip);
+  document.getElementById('filters').classList.toggle('hidden', !hasTrip);
+  document.getElementById('expensesSection').classList.toggle('hidden', !hasTrip);
+  document.getElementById('analytics').classList.toggle('hidden', !hasTrip);
+  document.getElementById('exportSection').classList.toggle('hidden', !hasTrip);
+  document.getElementById('addExpenseFab').classList.toggle('hidden', !hasTrip);
+}
+
+function showModal(content) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `<div class="modal-content"><span class="close" onclick="closeModal()">&times;</span>${content}</div>`;
+  document.getElementById('modalContainer').appendChild(modal);
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+window.closeModal = function() {
+  const modal = document.querySelector('.modal');
+  if (modal) modal.remove();};
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function updateOnlineStatus() {
+  const indicator = document.getElementById('onlineIndicator');
+  if (navigator.onLine) {
+    indicator.textContent = '🟢 Онлайн';
+    indicator.classList.remove('offline');
+  } else {
+    indicator.textContent = '🔴 Офлайн — данные сохраняются локально';
+    indicator.classList.add('offline');
+  }
+}
+
+function centerMapOnUser() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      if (map) {
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.marker([latitude, longitude]).addTo(map).bindPopup('📍 Вы здесь').openPopup();
+        map.setView([latitude, longitude], 15);
+      }
+    }, () => showToast('Не удалось получить местоположение', 'error'));
+  }
+}
+
+// ===== GLOBAL EXPOSE =====
+window TravelCar = { state, CATEGORIES };

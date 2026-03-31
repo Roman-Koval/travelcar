@@ -3,774 +3,314 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TravelCar CLOUD</title>
+<title>TravelCar</title>
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-<link rel="stylesheet" href="styles.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:#0f172a;color:#fff;padding:15px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:15px;background:#1e293b;border-radius:12px}
+h1{font-size:1.3rem}
+.status{padding:5px 12px;border-radius:20px;background:rgba(34,197,94,0.2);border:1px solid #22c55e;font-size:0.85rem}
+.card{background:#1e293b;padding:20px;border-radius:12px;margin-bottom:15px}
+.voice-btn{width:100%;padding:25px;background:linear-gradient(135deg,#22c55e,#3b82f6);border:none;border-radius:50px;color:#fff;font-size:1.3rem;font-weight:bold;cursor:pointer;margin-bottom:15px}
+.voice-btn.recording{animation:pulse 1.5s infinite;background:linear-gradient(135deg,#ef4444,#dc2626)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
+.form-group{margin-bottom:15px}
+label{display:block;margin-bottom:5px;color:#94a3b8;font-size:0.9rem}
+input,select{width:100%;padding:12px;border-radius:8px;border:2px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;font-size:1rem}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-weight:bold;margin-bottom:10px;cursor:pointer}
+.btn-primary{background:#22c55e;color:#fff}
+.btn-secondary{background:#334155;color:#fff;border:1px solid rgba(255,255,255,0.1)}
+.expense-item{background:#0f172a;padding:15px;border-radius:8px;margin-bottom:10px;border-left:4px solid #22c55e}
+.expense-header{display:flex;justify-content:space-between;margin-bottom:8px}
+.amount{font-size:1.2rem;font-weight:bold;color:#22c55e}
+.delete-btn{background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;margin-top:10px}
+#map{height:250px;border-radius:8px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#334155;color:#fff;padding:12px 24px;border-radius:50px;transition:all 0.3s;opacity:0;z-index:9999}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.success{background:#22c55e}
+.toast.error{background:#ef4444}
+</style>
 </head>
 <body>
 
 <header>
-  <div class="header-content">
-    <h1>🚗 TravelCar CLOUD</h1>
-    <div id="connection-status" class="status online">🟢 Online</div>
-  </div>
+  <h1>🚗 TravelCar</h1>
+  <div id="status" class="status">🟢 Online</div>
 </header>
 
-<main>
-  <!-- DIAGNOSTIC PANEL -->
-  <div class="card" style="background: #1e3a5f; border: 2px solid #f59e0b;">
-    <h3 style="color: #f59e0b;">🔧 Диагностика</h3>
-    <div id="diagnostic" style="font-size: 0.85rem; line-height: 1.8;">
-      Проверка...
-    </div>
-    <button onclick="runDiagnostic()" style="margin-top: 10px; background: #f59e0b; color: #000;">🔄 Проверить ещё раз</button>
-  </div>
+<div class="card">
+  <button id="voiceBtn" class="voice-btn" onclick="startVoice()">
+    🎤 Нажми и говори
+  </button>
+  <div id="voiceText" style="text-align:center;color:#94a3b8;margin-top:10px;"></div>
+</div>
 
-  <div class="card voice-card">
-    <button id="voiceBtn" onclick="startVoice()" class="voice-btn">
-      <span>🎤</span>
-      <span>Голосовой ввод</span>
-    </button>
-    <div id="voiceStatus" style="margin-top: 10px; color: #94a3b8;"></div>
-    
-    <!-- MANUAL TEST -->
-    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-      <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">📝 Или введите вручную:</label>
-      <input type="text" id="manualText" placeholder="Например: пицца 30 евро" style="margin-bottom: 10px;">
-      <button onclick="parseManual()" style="background: #3b82f6; width: 100%;">Распознать текст</button>
-    </div>
+<div class="card">  <div class="form-group">
+    <label>💰 Сумма</label>
+    <input type="number" id="amount" placeholder="0.00" step="0.01">
   </div>
-
-  <div class="card">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="form-group">
-      <label>💰 Сумма</label>
-      <input type="number" id="amount" placeholder="0.00" step="0.01">
+      <label>Валюта</label>
+      <select id="currency">
+        <option value="EUR">€ EUR</option>
+        <option value="USD">$ USD</option>
+        <option value="TRY">₺ TRY</option>
+        <option value="GBP">£ GBP</option>
+      </select>
     </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label>Валюта</label>
-        <select id="currency">
-          <option value="EUR">€ EUR</option>
-          <option value="TRY">₺ TRY</option>
-          <option value="USD">$ USD</option>
-          <option value="GBP">£ GBP</option>
-          <option value="CHF">₣ CHF</option>
-          <option value="CZK">Kč CZK</option>
-          <option value="PLN">zł PLN</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Категория</label>
-        <select id="category">
-          <option value="food">🍔 Еда</option>
-          <option value="fuel">⛽ Топливо</option>
-          <option value="hotel">🏨 Жильё</option>
-          <option value="transport">🚇 Транспорт</option>
-          <option value="shopping">🛍️ Покупки</option>
-          <option value="entertainment">🎭 Развлечения</option>
-          <option value="other">📦 Прочее</option>
-        </select>
-      </div>
-    </div>
-
     <div class="form-group">
-      <label>📝 Комментарий</label>
-      <input type="text" id="comment" placeholder="Описание...">
-    </div>
-
-    <div class="form-group">
-      <label>📍 Местоположение</label>
-      <input type="text" id="location" placeholder="Автоматически..." readonly>
-      <button onclick="getGeo()" class="small-btn">🔄 Обновить</button>
-    </div>
-
-    <div class="button-group">
-      <button onclick="addExpense()" class="btn-primary">💾 Сохранить</button>
-      <button onclick="exportData()" class="btn-secondary">📤 Экспорт JSON</button>
+      <label>Категория</label>
+      <select id="category">
+        <option value="food">🍔 Еда</option>
+        <option value="fuel">⛽ Топливо</option>
+        <option value="hotel">🏨 Жильё</option>
+        <option value="other">📦 Прочее</option>
+      </select>
     </div>
   </div>
-
-  <div class="card stats-card">
-    <h3>📊 Статистика</h3>
-    <div id="stats">
-      <div class="stat-item">
-        <span>Общая сумма:</span>
-        <span id="totalEUR" style="color: #22c55e; font-weight: bold;">€0.00</span>
-      </div>
-      <div class="stat-item">
-        <span>Записей:</span>
-        <span id="totalCount" style="color: #22c55e; font-weight: bold;">0</span>
-      </div>
-      <div id="categoryStats"></div>
-    </div>
+  <div class="form-group">
+    <label>📍 Город</label>
+    <input type="text" id="city" placeholder="Авто..." readonly>
   </div>
+  <button class="btn btn-primary" onclick="saveExpense()">💾 Сохранить</button>
+  <button class="btn btn-secondary" onclick="exportData()">📤 Экспорт</button>
+</div>
 
-  <div class="card">
-    <h3>📋 История</h3>
-    <div id="list" class="expense-list"></div>
-  </div>
+<div class="card">
+  <h3>📊 Всего: <span id="total" style="color:#22c55e">€0.00</span></h3>
+  <div id="list" style="margin-top:15px"></div>
+</div>
 
-  <div class="card">
-    <h3>🗺️ Карта</h3>
-    <div id="map" style="height: 300px; border-radius: 8px;"></div>
-  </div>
-</main>
-
-<footer>
-  <p>TravelCar v1.0 • <span id="lastSync">...</span></p>
-</footer>
+<div class="card">
+  <h3>🗺️ Карта</h3>
+  <div id="map"></div>
+</div>
 
 <div id="toast" class="toast"></div>
 
-<!-- Firebase -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
 <script>
-// ========== FIREBASE CONFIG - ЗАМЕНИ НА СВОИ ==========
+// 🔥 ЗАМЕНИ НА СВОЙ FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
+  projectId: "your-project"
 };
-// =====================================================
 
-// Initialize Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Globals
 let expenses = [];
-let map = null;
-let markersCluster = null;
-let routeLine = null;
+let map, markers = [];
+let lat, lng;
 let currentUser = null;
-let recognition = null;
-let ratesCache = { timestamp: 0,  null };
-const geoCache = new Map();
 
-const categories = {
-  food: { icon: '🍔', label: 'Еда' },
-  fuel: { icon: '⛽', label: 'Топливо' },
-  hotel: { icon: '🏨', label: 'Жильё' },
-  transport: { icon: '🚇', label: 'Транспорт' },
-  shopping: { icon: '🛍️', label: 'Покупки' },
-  entertainment: { icon: '🎭', label: 'Развлечения' },
-  other: { icon: '📦', label: 'Прочее' }
-};
-
-const currencySymbols = {
-  EUR: '€', USD: '$', TRY: '₺', GBP: '£', 
-  CHF: '₣', CZK: 'Kč', PLN: 'zł', RUB: '₽'
-};
-
-// ========== DIAGNOSTIC ==========
-function runDiagnostic() {
-  const diag = document.getElementById('diagnostic');
-  let html = '';
-  
-  // Check HTTPS
-  const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-  html += `<div>${isHTTPS ? '✅' : '❌'} HTTPS: ${isHTTPS ? 'Да' : 'Нет (нужен для микрофона)'}</div>`;
-  
-  // Check Speech Recognition
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  html += `<div>${SpeechRecognition ? '✅' : '❌'} Speech Recognition API: ${SpeechRecognition ? 'Доступен' : 'Не поддерживается'}</div>`;
-  
-  if (SpeechRecognition) {
-    const r = new SpeechRecognition();
-    html += `<div>🎤 Язык: ru-RU</div>`;
-    html += `<div>🎤 Continuous: ${r.continuous}</div>`;
-  }
-  
-  // Check microphone permission
-  if (navigator.permissions) {
-    navigator.permissions.query({ name: 'microphone' }).then(result => {
-      html += `<div>🎙️ Микрофон: ${result.state}</div>`;
-      diag.innerHTML = html;
-    }).catch(() => {
-      html += `<div>🎙️ Микрофон: неизвестно</div>`;
-      diag.innerHTML = html;
-    });
-  } else {
-    html += `<div>🎙️ Проверка прав: не поддерживается</div>`;
-    diag.innerHTML = html;
-  }
-  
-  // Check Firebase
-  html += `<div>${firebase.apps.length > 0 ? '✅' : '❌'} Firebase: ${firebase.apps.length > 0 ? 'Инициализирован' : 'Не инициализирован'}</div>`;
-  
-  diag.innerHTML = html;
-}
-
-// ========== VOICE RECOGNITION ==========
-function initSpeechRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  
-  if (!SpeechRecognition) {
-    showToast('❌ Браузер не поддерживает голосовой ввод. Используйте Chrome.', 'error');
-    return null;
-  }
-  
-  const r = new SpeechRecognition();
-  r.lang = 'ru-RU';
-  r.interimResults = false;
-  r.maxAlternatives = 1;
-  r.continuous = false;
-  
-  r.onstart = () => {
-    console.log('🎤 Recording started');
-    const btn = document.getElementById('voiceBtn');
-    const status = document.getElementById('voiceStatus');
-    if (btn) {
-      btn.classList.add('recording');
-      btn.innerHTML = '<span>🎙️</span><span>Запись...</span>';
-    }
-    if (status) status.textContent = '🔴 Говорите сейчас...';
-  };
-  
-  r.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript;
-    console.log('✅ Recognized:', transcript);
-    
-    const status = document.getElementById('voiceStatus');
-    if (status) status.textContent = `Распознано: "${transcript}"`;
-    
-    // Parse
-    const parsed = parseVoiceInput(transcript);
-    console.log('Parsed:', parsed);
-    
-    // Fill fields
-    const amountInput = document.getElementById('amount');
-    const currencySelect = document.getElementById('currency');
-    const categorySelect = document.getElementById('category');
-    const commentInput = document.getElementById('comment');
-    
-    if (amountInput && parsed.amount) amountInput.value = parsed.amount;
-    if (currencySelect) currencySelect.value = parsed.currency;
-    if (categorySelect) categorySelect.value = parsed.category;
-    if (commentInput) commentInput.value = transcript;
-    
-    showToast(`✅ ${parsed.amount} ${parsed.currency} - ${categories[parsed.category].label}`, 'success');
-    
-    // Get location
-    await getGeo();
-    
-    // Auto-save
-    setTimeout(() => addExpense(), 1500);
-  };
-  
-  r.onerror = (event) => {
-    console.error('❌ Voice error:', event.error);
-    const status = document.getElementById('voiceStatus');
-    let msg = 'Ошибка';
-    
-    switch(event.error) {
-      case 'no-speech': msg = '🔇 Не слышно речи'; break;
-      case 'audio-capture': msg = '🎤 Нет микрофона'; break;
-      case 'not-allowed': msg = '⛔ Нет разрешения на микрофон'; break;
-      case 'network': msg = '🌐 Ошибка сети'; break;
-      default: msg = `❌ ${event.error}`;
-    }
-    
-    if (status) status.textContent = msg;
-    showToast(msg, 'error');
-    
-    resetVoiceButton();
-  };
-  
-  r.onend = () => {
-    console.log('🎤 Recording ended');
-    resetVoiceButton();
-  };
-  
-  return r;
-}
-
-function resetVoiceButton() {
-  const btn = document.getElementById('voiceBtn');
-  const status = document.getElementById('voiceStatus');
-  if (btn) {
-    btn.classList.remove('recording');
-    btn.innerHTML = '<span>🎤</span><span>Голосовой ввод</span>';
-  }
-  setTimeout(() => {
-    if (status) status.textContent = '';
-  }, 2000);
-}
-
+// Voice Recognition
 function startVoice() {
-  // Run diagnostic first
-  runDiagnostic();
-  
-  if (!recognition) {
-    recognition = initSpeechRecognition();
-    if (!recognition) return;
-  }
-  
-  try {
-    recognition.start();
-  } catch (e) {
-    console.error('Start error:', e);
-    // Try to reinitialize
-    recognition = initSpeechRecognition();
-    if (recognition) {
-      try {
-        recognition.start();
-      } catch (e2) {
-        showToast('Ошибка запуска: ' + e2.message, 'error');
-      }
-    }
-  }
-}
-
-// Manual parse (for testing)
-function parseManual() {
-  const input = document.getElementById('manualText');
-  const text = input.value.trim();
-  
-  if (!text) {
-    showToast('Введите текст', 'error');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Используйте Chrome');
     return;
   }
   
-  const parsed = parseVoiceInput(text);
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'ru-RU';
   
-  const amountInput = document.getElementById('amount');
-  const currencySelect = document.getElementById('currency');
-  const categorySelect = document.getElementById('category');
-  const commentInput = document.getElementById('comment');
+  const btn = document.getElementById('voiceBtn');
+  const text = document.getElementById('voiceText');
   
-  if (amountInput) amountInput.value = parsed.amount || '';
-  if (currencySelect) currencySelect.value = parsed.currency;
-  if (categorySelect) categorySelect.value = parsed.category;
-  if (commentInput) commentInput.value = text;
+  btn.classList.add('recording');
+  btn.innerHTML = '🎙️ Слушаю...';
+  text.textContent = 'Говорите сейчас...';
   
-  showToast(`Распознано: ${parsed.amount} ${parsed.currency}`, 'success');
-  getGeo();
+  recognition.onresult = async (e) => {
+    const transcript = e.results[0][0].transcript;
+    text.textContent = `"${transcript}"`;
+    
+    // Parse
+    const parsed = parse(transcript);
+    document.getElementById('amount').value = parsed.amount;
+    document.getElementById('currency').value = parsed.currency;
+    document.getElementById('category').value = parsed.category;
+    
+    showToast(`✅ ${parsed.amount} ${parsed.currency}`, 'success');
+    
+    // Get location
+    await getLocation();
+        // Auto-save
+    setTimeout(saveExpense, 1000);
+  };
+  
+  recognition.onerror = (e) => {
+    console.error(e.error);
+    text.textContent = 'Ошибка: ' + e.error;
+    btn.classList.remove('recording');
+    btn.innerHTML = '🎤 Нажми и говори';
+  };
+  
+  recognition.onend = () => {
+    btn.classList.remove('recording');
+    btn.innerHTML = '🎤 Нажми и говори';
+  };
+  
+  recognition.start();
 }
 
-function parseVoiceInput(text) {
+function parse(text) {
   const lower = text.toLowerCase();
   
   // Amount
-  const amountMatch = lower.match(/(\d+[.,]?\d*)/);
-  let amount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+  const m = lower.match(/(\d+[.,]?\d*)/);
+  const amount = m ? parseFloat(m[1].replace(',', '.')) : 0;
   
   // Currency
   let currency = 'EUR';
-  if (/лир|try/i.test(lower)) currency = 'TRY';
-  else if (/доллар|дол|usd|\$/i.test(lower)) currency = 'USD';
-  else if (/фунт|gbp|£/i.test(lower)) currency = 'GBP';
-  else if (/франк|chf/i.test(lower)) currency = 'CHF';
-  else if (/злот|pln/i.test(lower)) currency = 'PLN';
-  else if (/крон|czk/i.test(lower)) currency = 'CZK';
-  else if (/рубль|rub|руб/i.test(lower)) currency = 'RUB';
+  if (/лир/i.test(lower)) currency = 'TRY';
+  else if (/дол/i.test(lower)) currency = 'USD';
+  else if (/фун/i.test(lower)) currency = 'GBP';
   
   // Category
   let category = 'other';
-  if (/еда|обед|ужин|завтрак|кофе|ресторан|кафе|пицца|бургер|food|eat|pizza/i.test(lower)) {
-    category = 'food';
-  } else if (/бензин|топливо|заправ|газ|fuel|petrol|gas/i.test(lower)) {
-    category = 'fuel';
-  } else if (/отель|гостиниц|жильё|ночлег|hotel|stay/i.test(lower)) {
-    category = 'hotel';
-  } else if (/транспорт|метро|автобус|такси|transport|taxi|metro/i.test(lower)) {
-    category = 'transport';
-  } else if (/покупк|шопинг|магазин|shopping|buy/i.test(lower)) {
-    category = 'shopping';
-  } else if (/развлеч|кино|театр|билет|entertainment|ticket/i.test(lower)) {
-    category = 'entertainment';
-  }
+  if (/еда|пицца|кофе|обед/i.test(lower)) category = 'food';
+  else if (/бензин|топливо|газ/i.test(lower)) category = 'fuel';
+  else if (/отель|гостиниц/i.test(lower)) category = 'hotel';
   
   return { amount, currency, category };
 }
 
-// ========== GEOLOCATION ==========
-async function getGeo() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      const loc = document.getElementById('location');
-      if (loc) loc.value = 'Не поддерживается';
+async function getLocation() {
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+      
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const d = await r.json();        const city = d.address?.city || d.address?.town || 'Unknown';
+        document.getElementById('city').value = city;
+      } catch(e) {
+        document.getElementById('city').value = `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+      }
       resolve();
-      return;
-    }
-    
-    const locInput = document.getElementById('location');
-    if (locInput) locInput.value = '📍 Определение...';
-    
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
-        
-        if (geoCache.has(key)) {
-          window._lat = lat;
-          window._lng = lng;
-          const loc = document.getElementById('location');
-          if (loc) loc.value = geoCache.get(key);
-          resolve();
-          return;
-        }
-        
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=ru`
-          );
-          const data = await res.json();
-          const city = data.address?.city || data.address?.town || data.address?.village || 'Unknown';
-          
-          geoCache.set(key, city);
-          window._lat = lat;
-          window._lng = lng;
-          
-          const loc = document.getElementById('location');
-          if (loc) loc.value = city;
-          
-          await new Promise(r => setTimeout(r, 1100));
-          resolve();
-        } catch (e) {
-          window._lat = lat;
-          window._lng = lng;
-          const loc = document.getElementById('location');
-          if (loc) loc.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          resolve();
-        }
-      },
-      (err) => {
-        console.warn('Geo error:', err);
-        const loc = document.getElementById('location');
-        if (loc) loc.value = 'Не определено';
-        resolve();
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    }, () => resolve(), { timeout: 5000 });
   });
 }
 
-// ========== CURRENCY ==========
-async function convertToEUR(amount, currency) {
-  if (!amount || currency === 'EUR') return amount || 0;
+async function saveExpense() {
+  const amount = parseFloat(document.getElementById('amount').value);
+  const currency = document.getElementById('currency').value;
+  const category = document.getElementById('category').value;
+  const city = document.getElementById('city').value;
   
-  const now = Date.now();
-  if (ratesCache.data && (now - ratesCache.timestamp) < 3600000) {
-    const rate = ratesCache.data[currency];
-    return rate ? amount / rate : amount;
-  }
-  
-  try {
-    const res = await fetch('https://api.frankfurter.dev/latest');
-    const data = await res.json();
-    ratesCache = { timestamp: now,  data.rates };
-    const rate = data.rates[currency];
-    return rate ? amount / rate : amount;
-  } catch (e) {
-    return amount;
-  }
-}
-
-// ========== ADD EXPENSE ==========
-async function addExpense() {
-  const amountInput = document.getElementById('amount');
-  const amount = parseFloat(amountInput?.value);
-  const currency = document.getElementById('currency')?.value || 'EUR';
-  const category = document.getElementById('category')?.value || 'other';
-  const comment = document.getElementById('comment')?.value.trim() || '';
-  const city = document.getElementById('location')?.value || '';
-  
-  if (!amount || amount <= 0) {
-    showToast('❌ Введите сумму', 'error');
-    return;
-  }
-  
-  if (!currentUser) {
-    showToast('⏳ Ожидание авторизации...', 'error');
-    setTimeout(addExpense, 2000);
-    return;
-  }
-  
-  showToast('💾 Сохранение...', 'success');
-  
-  try {
-    const eur = await convertToEUR(amount, currency);
-    
-    await db.collection('expenses').add({
-      amount,
-      currency,
-      category,
-      eur,
-      comment,
-      city,
-      lat: window._lat || null,
-      lng: window._lng || null,
-      date: firebase.firestore.FieldValue.serverTimestamp(),
-      userId: currentUser.uid,
-      createdAt: new Date().toISOString()
-    });
-    
-    if (amountInput) amountInput.value = '';
-    const commentInput = document.getElementById('comment');
-    if (commentInput) commentInput.value = '';
-    const manualInput = document.getElementById('manualText');
-    if (manualInput) manualInput.value = '';
-    
-    showToast('✅ Сохранено!', 'success');
-  } catch (e) {
-    console.error('Save error:', e);
-    showToast('Ошибка: ' + e.message, 'error');
-  }
-}
-
-// ========== DELETE ==========
-async function deleteExpense(id) {
-  if (!confirm('Удалить?')) return;
-  try {
-    await db.collection('expenses').doc(id).delete();
-    showToast('Удалено', 'success');
-  } catch (e) {
+  if (!amount || !currentUser) {
     showToast('Ошибка', 'error');
+    return;
   }
+  
+  // Convert to EUR (simplified)
+  const rates = { EUR: 1, USD: 0.92, TRY: 0.029, GBP: 1.17 };
+  const eur = amount * (rates[currency] || 1);
+  
+  await db.collection('expenses').add({
+    amount, currency, category, eur, city,
+    lat: lat || null, lng: lng || null,
+    date: firebase.firestore.FieldValue.serverTimestamp(),
+    userId: currentUser.uid
+  });
+  
+  document.getElementById('amount').value = '';
+  document.getElementById('city').value = '';
+  showToast('✅ Сохранено!', 'success');
 }
 
-// ========== RENDER ==========
-function renderExpenses() {
+async function deleteExpense(id) {
+  await db.collection('expenses').doc(id).delete();
+}
+
+function render() {
   const list = document.getElementById('list');
-  if (!list) return;
-  
-  const filterCat = document.getElementById('filterCategory')?.value || 'all';
   list.innerHTML = '';
   
   let total = 0;
-  const catTotals = {};
-  Object.keys(categories).forEach(c => catTotals[c] = 0);
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
   
-  const filtered = filterCat === 'all' ? expenses : expenses.filter(e => e.category === filterCat);
-  
-  if (filtered.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:#666;">📭 Нет записей</div>';
-  }
-  
-  filtered.forEach(exp => {
-    total += exp.eur || 0;
-    catTotals[exp.category] = (catTotals[exp.category] || 0) + (exp.eur || 0);
+  expenses.forEach(e => {    total += e.eur || 0;
     
     const div = document.createElement('div');
-    div.className = `expense-item category-${exp.category}`;
-    
-    const date = exp.date?.toDate ? exp.date.toDate() : new Date(exp.createdAt);
-    const dateStr = date.toLocaleString('ru-RU', { 
-      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
-    });
-    
-    const cat = categories[exp.category] || categories.other;
-    const sym = currencySymbols[exp.currency] || '';
-    
+    div.className = 'expense-item';
     div.innerHTML = `
       <div class="expense-header">
-        <div>
-          <span class="expense-amount">${sym}${exp.amount} ${exp.currency}</span>
-          <span class="expense-eur">(€${(exp.eur || 0).toFixed(2)})</span>
-        </div>
-        <span class="expense-category">${cat.icon} ${cat.label}</span>
+        <span class="amount">${e.amount} ${e.currency} (€${(e.eur||0).toFixed(2)})</span>
+        <span>${getCatIcon(e.category)}</span>
       </div>
-      ${exp.comment ? `<div class="expense-details">📝 ${exp.comment}</div>` : ''}
-      ${exp.city ? `<div class="expense-details">📍 ${exp.city}</div>` : ''}
-      <div class="expense-date">🕐 ${dateStr}</div>
-      <button class="delete-btn" onclick="deleteExpense('${exp.id}')">🗑️</button>
+      ${e.city ? `<div>📍 ${e.city}</div>` : ''}
+      <button class="delete-btn" onclick="deleteExpense('${e.id}')">Удалить</button>
     `;
-    
     list.appendChild(div);
+    
+    if (e.lat && e.lng) {
+      const m = L.marker([e.lat, e.lng]).addTo(map);
+      m.bindPopup(`${e.amount} ${e.currency}<br>${e.city || ''}`);
+      markers.push(m);
+    }
   });
   
-  const totalEl = document.getElementById('totalEUR');
-  const countEl = document.getElementById('totalCount');
-  const catStatsEl = document.getElementById('categoryStats');
+  document.getElementById('total').textContent = `€${total.toFixed(2)}`;
   
-  if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
-  if (countEl) countEl.textContent = filtered.length;
-  
-  if (catStatsEl) {
-    catStatsEl.innerHTML = '';
-    Object.entries(catTotals).forEach(([cat, tot]) => {
-      if (tot > 0) {
-        const info = categories[cat];
-        const div = document.createElement('div');
-        div.className = 'stat-item';
-        div.innerHTML = `<span>${info.icon} ${info.label}</span><span style="color:#22c55e;font-weight:bold;">€${tot.toFixed(2)}</span>`;
-        catStatsEl.appendChild(div);
-      }
-    });
+  if (markers.length > 0) {
+    const group = new L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.1));
   }
 }
 
-// ========== EXPORT ==========
+function getCatIcon(cat) {
+  const icons = { food: '🍔', fuel: '⛽', hotel: '🏨', other: '📦' };
+  return icons[cat] || '📦';
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
 function exportData() {
-  if (expenses.length === 0) {
-    showToast('Нет данных', 'error');
-    return;
-  }
-  const data = expenses.map(e => ({
-    amount: e.amount,
-    currency: e.currency,
-    eur: e.eur,
-    category: e.category,
-    comment: e.comment,
-    city: e.city,
-    date: e.date?.toDate ? e.date.toDate().toISOString() : e.createdAt
-  }));
-  
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(expenses, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `travelcar-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = 'travelcar.json';
   a.click();
-  showToast('Экспортировано', 'success');
 }
 
-// ========== TOAST ==========
-function showToast(msg, type = 'success') {
-  const toast = document.getElementById('toast');
-  if (!toast) {
-    alert(msg);
-    return;
-  }
-  toast.textContent = msg;
-  toast.className = `toast ${type} show`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-// ========== AUTH ==========
-auth.onAuthStateChanged(user => {
+// Authauth.onAuthStateChanged(user => {
   if (user) {
-    console.log('✅ Auth:', user.uid);
     currentUser = user;
-    
-    db.collection('expenses')
-      .where('userId', '==', user.uid)
+    db.collection('expenses').where('userId', '==', user.uid)
       .orderBy('date', 'desc')
-      .onSnapshot(snapshot => {
-        expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log('Loaded:', expenses.length);
-        renderExpenses();
-        updateMap();
-        
-        const sync = document.getElementById('lastSync');
-        if (sync) sync.textContent = new Date().toLocaleTimeString('ru-RU');
-      }, err => {
-        console.error('Firestore error:', err);
-        showToast('Ошибка синхронизации', 'error');
+      .onSnapshot(snap => {
+        expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
       });
   } else {
-    console.log('🔄 Anonymous sign-in...');
-    auth.signInAnonymously()
-      .then(() => console.log('✅ Anonymous OK'))
-      .catch(err => {
-        console.error('❌ Auth error:', err);
-        showToast('Ошибка авторизации', 'error');
-      });
+    auth.signInAnonymously();
   }
 });
 
-// ========== MAP ==========
-function initMap() {
-  try {
-    if (map) return;
-    map = L.map('map').setView([51.5, 10], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19
-    }).addTo(map);
-    
-    markersCluster = L.markerClusterGroup();
-    map.addLayer(markersCluster);
-  } catch (e) {
-    console.error('Map error:', e);
-  }
-}
-
-function updateMap() {
-  if (!map || !markersCluster) return;
-  
-  markersCluster.clearLayers();
-  const points = [];
-  
-  expenses.forEach(exp => {
-    if (exp.lat && exp.lng) {
-      const cat = categories[exp.category] || categories.other;
-      const sym = currencySymbols[exp.currency] || '';
-      
-      const marker = L.marker([exp.lat, exp.lng]);
-      const date = exp.date?.toDate ? exp.date.toDate() : new Date(exp.createdAt);
-      
-      marker.bindPopup(`
-        <div style="min-width:150px;">
-          <b>${cat.icon} ${sym}${exp.amount}</b><br>
-          <span style="color:#22c55e;">€${(exp.eur || 0).toFixed(2)}</span><br>
-          ${exp.city ? `<div>📍 ${exp.city}</div>` : ''}
-          ${exp.comment ? `<div>${exp.comment}</div>` : ''}
-          <div style="font-size:0.85em;color:#666;margin-top:5px;">${date.toLocaleDateString('ru-RU')}</div>
-        </div>
-      `);
-      
-      markersCluster.addLayer(marker);
-      points.push([exp.lat, exp.lng]);
-    }
-  });
-  
-  if (routeLine) map.removeLayer(routeLine);
-  
-  if (points.length >= 2) {
-    routeLine = L.polyline(points, {
-      color: '#22c55e',
-      weight: 3,
-      opacity: 0.7,
-      dashArray: '10, 10'
-    }).addTo(map);
-    
-    map.fitBounds(L.latLngBounds(points), { padding: [20, 20], maxZoom: 14 });
-  } else if (points.length === 1) {
-    map.setView(points[0], 13);
-  }
-}
-
-// ========== INIT ==========
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    initMap();
-    runDiagnostic();
-  }, 1000);
-  
-  window.addEventListener('online', () => {
-    const status = document.getElementById('connection-status');
-    if (status) {
-      status.innerHTML = '🟢 Online';
-      status.className = 'status online';
-    }
-  });
-  
-  window.addEventListener('offline', () => {
-    const status = document.getElementById('connection-status');
-    if (status) {
-      status.innerHTML = '🔴 Offline';
-      status.className = 'status offline';
-    }
-  });
-});
+// Init
+window.onload = () => {
+  map = L.map('map').setView([50, 10], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+};
 </script>
 
 </body>

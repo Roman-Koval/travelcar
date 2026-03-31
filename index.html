@@ -537,7 +537,8 @@ async function deleteExpense(id) {
   }
 }
 
-// ========== RENDER ==========function renderExpenses() {
+// ========== RENDER ==========
+function renderExpenses() {
   const list = document.getElementById('list');
   if (!list) return;
   
@@ -586,7 +587,8 @@ async function deleteExpense(id) {
     list.appendChild(div);
   });
   
-  const totalEl = document.getElementById('totalEUR');  const countEl = document.getElementById('totalCount');
+  const totalEl = document.getElementById('totalEUR');
+  const countEl = document.getElementById('totalCount');
   const catStatsEl = document.getElementById('categoryStats');
   
   if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
@@ -599,4 +601,167 @@ async function deleteExpense(id) {
         const info = categories[cat];
         const div = document.createElement('div');
         div.className = 'stat-item';
-        div.innerHTML
+        div.innerHTML = `<span>${info.icon} ${info.label}</span><span style="color:#22c55e;font-weight:bold;">€${tot.toFixed(2)}</span>`;
+        catStatsEl.appendChild(div);
+      }
+    });
+  }
+}
+
+// ========== EXPORT ==========
+function exportData() {
+  if (expenses.length === 0) {
+    showToast('Нет данных', 'error');
+    return;
+  }
+  const data = expenses.map(e => ({
+    amount: e.amount,
+    currency: e.currency,
+    eur: e.eur,
+    category: e.category,
+    comment: e.comment,
+    city: e.city,
+    date: e.date?.toDate ? e.date.toDate().toISOString() : e.createdAt
+  }));
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `travelcar-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  showToast('Экспортировано', 'success');
+}
+
+// ========== TOAST ==========
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  if (!toast) {
+    alert(msg);
+    return;
+  }
+  toast.textContent = msg;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ========== AUTH ==========
+auth.onAuthStateChanged(user => {
+  if (user) {
+    console.log('✅ Auth:', user.uid);
+    currentUser = user;
+    
+    db.collection('expenses')
+      .where('userId', '==', user.uid)
+      .orderBy('date', 'desc')
+      .onSnapshot(snapshot => {
+        expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Loaded:', expenses.length);
+        renderExpenses();
+        updateMap();
+        
+        const sync = document.getElementById('lastSync');
+        if (sync) sync.textContent = new Date().toLocaleTimeString('ru-RU');
+      }, err => {
+        console.error('Firestore error:', err);
+        showToast('Ошибка синхронизации', 'error');
+      });
+  } else {
+    console.log('🔄 Anonymous sign-in...');
+    auth.signInAnonymously()
+      .then(() => console.log('✅ Anonymous OK'))
+      .catch(err => {
+        console.error('❌ Auth error:', err);
+        showToast('Ошибка авторизации', 'error');
+      });
+  }
+});
+
+// ========== MAP ==========
+function initMap() {
+  try {
+    if (map) return;
+    map = L.map('map').setView([51.5, 10], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(map);
+    
+    markersCluster = L.markerClusterGroup();
+    map.addLayer(markersCluster);
+  } catch (e) {
+    console.error('Map error:', e);
+  }
+}
+
+function updateMap() {
+  if (!map || !markersCluster) return;
+  
+  markersCluster.clearLayers();
+  const points = [];
+  
+  expenses.forEach(exp => {
+    if (exp.lat && exp.lng) {
+      const cat = categories[exp.category] || categories.other;
+      const sym = currencySymbols[exp.currency] || '';
+      
+      const marker = L.marker([exp.lat, exp.lng]);
+      const date = exp.date?.toDate ? exp.date.toDate() : new Date(exp.createdAt);
+      
+      marker.bindPopup(`
+        <div style="min-width:150px;">
+          <b>${cat.icon} ${sym}${exp.amount}</b><br>
+          <span style="color:#22c55e;">€${(exp.eur || 0).toFixed(2)}</span><br>
+          ${exp.city ? `<div>📍 ${exp.city}</div>` : ''}
+          ${exp.comment ? `<div>${exp.comment}</div>` : ''}
+          <div style="font-size:0.85em;color:#666;margin-top:5px;">${date.toLocaleDateString('ru-RU')}</div>
+        </div>
+      `);
+      
+      markersCluster.addLayer(marker);
+      points.push([exp.lat, exp.lng]);
+    }
+  });
+  
+  if (routeLine) map.removeLayer(routeLine);
+  
+  if (points.length >= 2) {
+    routeLine = L.polyline(points, {
+      color: '#22c55e',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: '10, 10'
+    }).addTo(map);
+    
+    map.fitBounds(L.latLngBounds(points), { padding: [20, 20], maxZoom: 14 });
+  } else if (points.length === 1) {
+    map.setView(points[0], 13);
+  }
+}
+
+// ========== INIT ==========
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    initMap();
+    runDiagnostic();
+  }, 1000);
+  
+  window.addEventListener('online', () => {
+    const status = document.getElementById('connection-status');
+    if (status) {
+      status.innerHTML = '🟢 Online';
+      status.className = 'status online';
+    }
+  });
+  
+  window.addEventListener('offline', () => {
+    const status = document.getElementById('connection-status');
+    if (status) {
+      status.innerHTML = '🔴 Offline';
+      status.className = 'status offline';
+    }
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,7 +1,8 @@
 {
   "name": "TravelCar — учёт расходов в поездках",
   "short_name": "TravelCar",
-  "start_url": "index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#1e88e5",

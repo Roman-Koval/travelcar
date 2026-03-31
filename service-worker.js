@@ -1,43 +1,41 @@
-const CACHE_NAME = "travelcar-cache-v1";
+const CACHE_NAME = "travelcar-cache-v2";
 
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./css/styles.css",
+  "./js/app.js",
   "./travelcar-icon-192.png",
-  "./travelcar-icon-512.png"
+  "./travelcar-icon-512.png",
+  "./version.json"
 ];
 
-// Установка SW
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
+  self.skipWaiting();
 });
 
-// Активация
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
       )
     )
   );
+  self.clients.claim();
 });
 
-// Перехват запросов
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) => cached || fetch(event.request)
-    )
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
   );
 });
-self.addEventListener("push", event => {
+
+// базовый push-хэндлер (локальные уведомления)
+self.addEventListener("push", (event) => {
   const data = event.data?.json() || {};
   event.waitUntil(
     self.registration.showNotification(data.title || "TravelCar", {

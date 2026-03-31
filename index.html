@@ -2,210 +2,144 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TravelCar CLOUD</title>
+<meta name="description" content="Учет расходов в путешествиях с голосовым вводом">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
+<link rel="icon" type="image/png" sizes="192x192" href="travelcar-icon-192.png">
+<link rel="apple-touch-icon" href="travelcar-icon-192.png">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<style>
-body{margin:0;font-family:sans-serif;background:#0f172a;color:#fff}
-header{padding:15px;font-size:22px;font-weight:bold}
-.card{background:#1e293b;margin:10px;padding:12px;border-radius:12px}
-button{padding:12px;margin:5px;border-radius:10px;border:none;background:#22c55e;font-weight:bold}
-input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
-#map{height:300px;margin:10px;border-radius:12px}
-</style>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header>🚗 TravelCar CLOUD</header>
+<header>
+  <div class="header-content">
+    <h1>🚗 TravelCar CLOUD</h1>
+    <div id="connection-status" class="status online">🟢 Online</div>
+  </div>
+</header>
 
-<div class="card">
-<button onclick="startVoice()">🎤 Голос</button>
-<button onclick="addExpense()">💾 Сохранить</button>
-<button onclick="exportData()">📤 Экспорт</button>
-</div>
+<main>
+  <div class="card voice-card">
+    <button id="voiceBtn" onclick="startVoice()" class="voice-btn">
+      <span class="btn-icon">🎤</span>
+      <span class="btn-text">Голосовой ввод</span>
+    </button>
+    <div id="voiceStatus" class="voice-status"></div>
+  </div>
 
-<div class="card">
-<input id="amount" placeholder="Сумма">
-<select id="currency">
-<option value="EUR">EUR</option>
-<option value="TRY">TRY</option>
-<option value="USD">USD</option>
-<option value="GBP">GBP</option>
-<option value="CHF">CHF</option>
-<option value="CZK">CZK</option>
-<option value="PLN">PLN</option>
-</select>
+  <div class="card">
+    <div class="form-group">
+      <label for="amount">💰 Сумма</label>
+      <input type="number" id="amount" placeholder="0.00" step="0.01" inputmode="decimal">
+    </div>
 
-<select id="category">
-<option value="food">🍔 Еда</option>
-<option value="fuel">⛽ Топливо</option>
-<option value="hotel">🏨 Жильё</option>
-<option value="other">📦 Прочее</option>
-</select>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="currency">Валюта</label>
+        <select id="currency">
+          <option value="EUR">€ EUR</option>
+          <option value="TRY">₺ TRY</option>          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+          <option value="CHF">₣ CHF</option>
+          <option value="CZK">Kč CZK</option>
+          <option value="PLN">zł PLN</option>
+          <option value="RUB">₽ RUB</option>
+        </select>
+      </div>
 
-<input id="comment">
-<input id="location">
-</div>
+      <div class="form-group">
+        <label for="category">Категория</label>
+        <select id="category">
+          <option value="food">🍔 Еда</option>
+          <option value="fuel">⛽ Топливо</option>
+          <option value="hotel">🏨 Жильё</option>
+          <option value="transport">🚇 Транспорт</option>
+          <option value="shopping">🛍️ Покупки</option>
+          <option value="entertainment">🎭 Развлечения</option>
+          <option value="other">📦 Прочее</option>
+        </select>
+      </div>
+    </div>
 
-<div id="stats" class="card"></div>
-<div id="list" class="card"></div>
-<div id="map"></div>
+    <div class="form-group">
+      <label for="comment">📝 Комментарий</label>
+      <input type="text" id="comment" placeholder="Описание расхода...">
+    </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div class="form-group">
+      <label for="location">📍 Местоположение</label>
+      <input type="text" id="location" placeholder="Определяется автоматически..." readonly>
+      <button onclick="getGeo()" class="small-btn">🔄 Обновить</button>
+    </div>
 
-<!-- Firebase -->
+    <div class="button-group">
+      <button onclick="addExpense()" class="btn-primary">💾 Сохранить расход</button>
+      <button onclick="exportData()" class="btn-secondary">📤 Экспорт JSON</button>
+      <button onclick="exportCSV()" class="btn-secondary">📊 Экспорт CSV</button>
+    </div>
+  </div>
+
+  <div class="card stats-card">
+    <h3>📊 Статистика</h3>
+    <div id="stats">
+      <div class="stat-item">
+        <span class="stat-label">Общая сумма:</span>
+        <span class="stat-value" id="totalEUR">€0.00</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Записей:</span>        <span class="stat-value" id="totalCount">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">По категориям:</span>
+      </div>
+      <div id="categoryStats"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📋 История расходов</h3>
+    <div id="filters" class="filters">
+      <select id="filterCategory" onchange="renderExpenses()">
+        <option value="all">Все категории</option>
+        <option value="food">🍔 Еда</option>
+        <option value="fuel">⛽ Топливо</option>
+        <option value="hotel">🏨 Жильё</option>
+        <option value="transport">🚇 Транспорт</option>
+        <option value="shopping">🛍️ Покупки</option>
+        <option value="entertainment">🎭 Развлечения</option>
+        <option value="other">📦 Прочее</option>
+      </select>
+    </div>
+    <div id="list" class="expense-list"></div>
+  </div>
+
+  <div class="card map-card">
+    <h3>🗺️ Карта маршрута</h3>
+    <div id="map"></div>
+  </div>
+</main>
+
+<footer>
+  <p>TravelCar CLOUD v1.0 • <span id="lastSync">Синхронизация...</span></p>
+</footer>
+
+<div id="toast" class="toast"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="app.js"></script>
 
-<script>
-
-// 🔥 ВСТАВЬ СВОЙ CONFIG СЮДА
-const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_ID"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.firestore();
-
-// 🔐 Анонимная авторизация
-firebase.auth().signInAnonymously();
-
-let expenses = [];
-
-const map = L.map('map').setView([50,10],4);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-// ===== СИНХРОНИЗАЦИЯ =====
-firebase.auth().onAuthStateChanged(user=>{
- if(user){
-  db.collection('expenses').orderBy('date')
-    .onSnapshot(snapshot=>{
-      expenses = snapshot.docs.map(d=>d.data());
-      render();
-    });
- }
-});
-
-// ===== ГОЛОС =====
-function startVoice(){
- const r=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
- r.lang='ru-RU';
- r.onresult=e=>{
-  const t=e.results[0][0].transcript;
-  const p=parse(t);
-  amount.value=p.amount;
-  currency.value=p.currency;
-  category.value=p.category;
-  comment.value=t;
-  getGeo();
- };
- r.start();
-}
-
-function parse(t){
- const amount=parseFloat((t.match(/\d+/)||[0])[0]);
- let currency='EUR';
- if(/лир/i.test(t))currency='TRY';
- if(/дол/i.test(t))currency='USD';
- if(/фунт/i.test(t))currency='GBP';
-
- let category='other';
- if(/еда|кофе/i.test(t))category='food';
- if(/бензин/i.test(t))category='fuel';
- if(/отель/i.test(t))category='hotel';
-
- return{amount,currency,category};
-}
-
-// ===== GEO =====
-function getGeo(){
- navigator.geolocation.getCurrentPosition(async pos=>{
-  const lat=pos.coords.latitude;
-  const lng=pos.coords.longitude;
-  window._lat=lat;window._lng=lng;
-
-  const res=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-  const d=await res.json();
-  location.value=d.address.city||'';
- });
-}
-
-// ===== FX =====
-async function convert(amount,currency){
- const res=await fetch('https://api.exchangerate.host/latest?base=EUR');
- const data=await res.json();
- if(currency==='EUR')return amount;
- return amount/(data.rates[currency]||1);
-}
-
-// ===== ADD =====
-async function addExpense(){
- const eur=await convert(+amount.value,currency.value);
-
- await db.collection('expenses').add({
-  amount:+amount.value,
-  currency:currency.value,
-  category:category.value,
-  eur,
-  comment:comment.value,
-  city:location.value,
-  lat:window._lat,
-  lng:window._lng,
-  date:new Date()
- });
-}
-
-// ===== UI =====
-function render(){
- list.innerHTML='';
- stats.innerHTML='';
- let total=0;
- const pts=[];
-
- expenses.forEach(e=>{
-  total+=e.eur;
-
-  const div=document.createElement('div');
-  div.innerHTML=`${e.amount} ${e.currency} (€${e.eur.toFixed(2)}) ${e.city}`;
-  list.appendChild(div);
-
-  if(e.lat){
-   pts.push([e.lat,e.lng]);
-   L.marker([e.lat,e.lng]).addTo(map);
-  }
- });
-
- stats.innerHTML=`💰 €${total.toFixed(2)}`;
-
- if(pts.length>1){
-  L.polyline(pts).addTo(map);
-  map.fitBounds(pts);
- }
-}
-
-// ===== EXPORT =====
-function exportData(){
- const blob=new Blob([JSON.stringify(expenses)],{type:'application/json'});
- const a=document.createElement('a');
- a.href=URL.createObjectURL(blob);
- a.download='travel.json';
- a.click();
-}
-
-if('serviceWorker'in navigator){
- navigator.serviceWorker.register('service-worker.js');
-}
-
-</script>
 </body>
 </html>

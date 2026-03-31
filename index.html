@@ -16,7 +16,7 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 .item{background:#1e293b;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e;cursor:pointer}
 .item:hover{border-left-color:#3b82f6}
 #map{height:200px;border-radius:8px;background:#1e293b;margin-top:10px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 24px;border-radius:30px;display:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 24px;border-radius:30px;display:none;z-index:9999}
 .auto{background:#1e3a5f;padding:12px;border-radius:10px;margin:10px 0;text-align:center;font-size:0.95rem}
 .auto.on{background:#166534}
 .loc{color:#94a3b8;font-size:0.9rem;margin:5px 0}
@@ -42,14 +42,23 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <select id="cur">
   <option value="EUR">€ EUR (Евро)</option>
   <option value="USD">$ USD (Доллар)</option>
-  <option value="TRY">₺ TRY (Лиры)</option>
   <option value="GBP">£ GBP (Фунт)</option>
+  <option value="TRY">₺ TRY (Лиры)</option>
+  <option value="CHF">₣ CHF (Франк)</option>
+  <option value="PLN">zł PLN (Злотые)</option>
+  <option value="CZK">Kč CZK (Кроны)</option>
+  <option value="HUF">Ft HUF (Форинты)</option>  <option value="RON">lei RON (Леи)</option>
+  <option value="BGN">лв BGN (Левы)</option>
+  <option value="RSD">дин RSD (Динары)</option>
 </select>
 
 <label>Категория</label>
-<select id="cat">  <option value="food">🍔 Еда</option>
+<select id="cat">
+  <option value="food">🍔 Еда</option>
   <option value="fuel">⛽ Топливо</option>
   <option value="hotel">🏨 Жильё</option>
+  <option value="transport">🚗 Транспорт</option>
+  <option value="shopping">🛍️ Покупки</option>
   <option value="other">📦 Прочее</option>
 </select>
 
@@ -71,9 +80,30 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <script>
 let data = [], map, marks = [], lat, lng;
 
-const EUR_RATES = { EUR: 1, USD: 0.92, TRY: 0.029, GBP: 1.17 };
-const CUR_SYMBOLS = { EUR: '€', USD: '$', TRY: '₺', GBP: '£' };
-const CAT_ICONS = { food: '🍔', fuel: '⛽', hotel: '🏨', other: '📦' };
+// Курсы валют к EUR (1 единица = X EUR)
+const EUR_RATES = {
+  EUR: 1.00,      // Евро
+  USD: 0.92,      // Доллар США
+  GBP: 1.17,      // Фунт стерлингов (Великобритания)
+  TRY: 0.029,     // Турецкая лира (Турция, Сев. Кипр)
+  CHF: 1.05,      // Швейцарский франк (Швейцария)
+  PLN: 0.23,      // Польский злотый (Польша)
+  CZK: 0.041,     // Чешская крона (Чехия)
+  HUF: 0.0026,    // Венгерский форинт (Венгрия)
+  RON: 0.20,      // Румынский лей (Румыния)
+  BGN: 0.51,      // Болгарский лев (Болгария)
+  RSD: 0.0085     // Сербский динар (Сербия)
+};
+
+const CUR_SYMBOLS = {
+  EUR: '€', USD: '$', GBP: '£', TRY: '₺',  CHF: '₣', PLN: 'zł', CZK: 'Kč', HUF: 'Ft',
+  RON: 'lei', BGN: 'лв', RSD: 'дин'
+};
+
+const CAT_ICONS = {
+  food: '🍔', fuel: '⛽', hotel: '🏨',
+  transport: '🚗', shopping: '🛍️', other: '📦'
+};
 
 window.onload = function() {
   map = L.map('map').setView([50, 10], 4);
@@ -96,7 +126,8 @@ function speak() {
   status.textContent = '🎤 Говорите сейчас...';
   status.className = 'auto';
   
-  r.onresult = async function(e) {    const t = e.results[0][0].transcript;
+  r.onresult = async function(e) {
+    const t = e.results[0][0].transcript;
     txt.textContent = '"' + t + '"';
     status.textContent = '✅ Распознано: "' + t + '"';
     status.className = 'auto on';
@@ -105,23 +136,44 @@ function speak() {
     const m = t.toLowerCase().match(/(\d+[.,]?\d*)/);
     const amt = m ? parseFloat(m[1].replace(',', '.')) : 0;
     
-    // Parse currency
+    // Parse currency - ALL CURRENCIES
     let cur = 'EUR';
-    if (/лир|try/i.test(t)) cur = 'TRY';
-    else if (/дол|usd|\$/i.test(t)) cur = 'USD';
-    else if (/фун|gbp|£/i.test(t)) cur = 'GBP';
+    const lower = t.toLowerCase();
     
-    // Parse category
+    if (/лир|try/i.test(lower)) cur = 'TRY';
+    else if (/дол|usd|\$/i.test(lower)) cur = 'USD';
+    else if (/фун|gbp|£/i.test(lower)) cur = 'GBP';
+    else if (/злот|pln|польск/i.test(lower)) cur = 'PLN';
+    else if (/крон|czk|чешск/i.test(lower)) cur = 'CZK';
+    else if (/форинт|huf|венгр/i.test(lower)) cur = 'HUF';    else if (/лей|ron|румын/i.test(lower)) cur = 'RON';
+    else if (/лев|bgn|болгар/i.test(lower)) cur = 'BGN';
+    else if (/динар|rsd|серб/i.test(lower)) cur = 'RSD';
+    else if (/франк|chf|швейц/i.test(lower)) cur = 'CHF';
+    
+    // Parse category - IMPROVED
     let cat = 'food';
-    if (/бензин|топливо|газ|fuel|petrol/i.test(t)) cat = 'fuel';
-    else if (/отель|гостиниц|жильё|hotel|ночлег/i.test(t)) cat = 'hotel';
-    else if (/транспорт|метро|автобус|такси|taxi|metro/i.test(t)) cat = 'other';
+    
+    if (/заправ|бензин|топливо|газ|fuel|petrol|oil/i.test(lower)) {
+      cat = 'fuel';
+    }
+    else if (/отель|гостиниц|жильё|ночлег|hotel|accommodation|апартамент/i.test(lower)) {
+      cat = 'hotel';
+    }
+    else if (/транспорт|метро|автобус|такси|taxi|metro|bus|билет|поезд|train/i.test(lower)) {
+      cat = 'transport';
+    }
+    else if (/покупк|шопинг|магазин|shopping|buy|сувенир/i.test(lower)) {
+      cat = 'shopping';
+    }
+    else if (/еда|обед|ужин|завтрак|кафе|ресторан|пицца|кофе|чай|burger|food|eat|pizza/i.test(lower)) {
+      cat = 'food';
+    }
     
     document.getElementById('amt').value = amt;
     document.getElementById('cur').value = cur;
     document.getElementById('cat').value = cat;
     
-    status.textContent = '📍 Определение города...';
+    status.textContent = '📍 ' + CAT_ICONS[cat] + ' ' + amt + ' ' + cur + ' - Город...';
     
     // Get location
     if (navigator.geolocation) {
@@ -133,31 +185,18 @@ function speak() {
           const res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&addressdetails=1&accept-language=ru');
           const d = await res.json();
           
-          // Get city/town/village name
-          let placeName = d.address?.city || 
-                         d.address?.town || 
-                         d.address?.village || 
-                         d.address?.municipality || 
-                         d.address?.county || 
-                         d.address?.state_district ||
-                         '';
+          let placeName = d.address?.city || d.address?.town || d.address?.village || d.address?.municipality || d.address?.county || '';
           
-          if (placeName) {
-            document.getElementById('loc').value = placeName;
-            status.textContent = '📍 ' + placeName;
-          } else {            document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
-          }
+          document.getElementById('loc').value = placeName || (lat.toFixed(4) + ', ' + lng.toFixed(4));
         } catch(e) {
           console.warn('Geo error:', e);
           document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
         }
         
-        status.textContent = '💾 Авто-сохранение...';
-        setTimeout(autoSave, 1000);
-      }, function(err) {
+        status.textContent = '💾 Сохранение...';
+        setTimeout(autoSave, 1000);      }, function(err) {
         console.warn('GPS error:', err);
         document.getElementById('loc').value = 'GPS off';
-        status.textContent = '💾 Сохранение (без GPS)...';
         setTimeout(autoSave, 1000);
       }, { timeout: 10000, enableHighAccuracy: true });
     } else {
@@ -169,7 +208,6 @@ function speak() {
   r.onerror = function(e) {
     console.error('Voice error:', e.error);
     document.getElementById('txt').textContent = 'Ошибка: ' + e.error;
-    document.getElementById('autoStatus').textContent = '❌ Ошибка распознавания';
     setTimeout(resetStatus, 2000);
   };
   
@@ -178,11 +216,7 @@ function speak() {
   };
   
   try { r.start(); }
-  catch(e) { 
-    console.error(e); 
-    alert('Ошибка запуска распознавания'); 
-    resetStatus(); 
-  }
+  catch(e) { console.error(e); alert('Ошибка запуска'); resetStatus(); }
 }
 
 function autoSave() {
@@ -194,22 +228,11 @@ function autoSave() {
   }
   
   const cur = document.getElementById('cur').value;
-  const cat = document.getElementById('cat').value;  const loc = document.getElementById('loc').value;
-  
+  const cat = document.getElementById('cat').value;
+  const loc = document.getElementById('loc').value;
   const eur = amt * (EUR_RATES[cur] || 1);
   
-  data.unshift({
-    id: Date.now(),
-    amt: amt,
-    cur: cur,
-    cat: cat,
-    eur: eur,
-    loc: loc,
-    lat: lat,
-    lng: lng,
-    date: new Date().toISOString()
-  });
-  
+  data.unshift({ id: Date.now(), amt, cur, cat, eur, loc, lat, lng, date: new Date().toISOString() });
   localStorage.setItem('tc_data', JSON.stringify(data));
   
   document.getElementById('amt').value = '';
@@ -218,133 +241,98 @@ function autoSave() {
   show('✅ ' + CUR_SYMBOLS[cur] + amt + ' ' + cur + ' = €' + eur.toFixed(2));
   document.getElementById('autoStatus').textContent = '✅ Сохранено!';
   setTimeout(resetStatus, 2000);
-  
   render();
 }
-
 function save() {
   const amt = parseFloat(document.getElementById('amt').value);
-  if (!amt || amt <= 0) {
-    show('❌ Введите сумму');
-    return;
-  }
+  if (!amt || amt <= 0) { show('❌ Введите сумму'); return; }
   
   const cur = document.getElementById('cur').value;
   const cat = document.getElementById('cat').value;
   const loc = document.getElementById('loc').value;
-  
   const eur = amt * (EUR_RATES[cur] || 1);
   
-  data.unshift({
-    id: Date.now(),
-    amt: amt,
-    cur: cur,
-    cat: cat,
-    eur: eur,
-    loc: loc,
-    lat: lat,
-    lng: lng,    date: new Date().toISOString()
-  });
-  
+  data.unshift({ id: Date.now(), amt, cur, cat, eur, loc, lat, lng, date: new Date().toISOString() });
   localStorage.setItem('tc_data', JSON.stringify(data));
   
   document.getElementById('amt').value = '';
   document.getElementById('loc').value = '';
-  
   show('✅ ' + CUR_SYMBOLS[cur] + amt + ' ' + cur + ' = €' + eur.toFixed(2));
   render();
 }
 
 function del(id) {
-  if (!confirm('Удалить запись?')) return;
+  if (!confirm('Удалить?')) return;
   data = data.filter(x => x.id !== id);
   localStorage.setItem('tc_data', JSON.stringify(data));
   render();
-  show('🗑️ Удалено');
 }
 
 function clr() {
-  if (!confirm('Очистить ВСЕ записи?')) return;
+  if (!confirm('Очистить ВСЁ?')) return;
   data = [];
   localStorage.removeItem('tc_data');
   render();
-  show('🗑️ Всё очищено');
 }
 
-function openMap(latitude, longitude, location) {
-  if (!latitude || !longitude) {
-    show('📍 Нет координат');
-    return;
-  }
-  const url = 'https://www.google.com/maps/place/' + latitude + ',' + longitude + '/@' + latitude + ',' + longitude + ',17z';
-  window.open(url, '_blank');
+function openMap(latitude, longitude) {
+  if (!latitude || !longitude) { show('📍 Нет координат'); return; }
+  window.open('https://www.google.com/maps/place/' + latitude + ',' + longitude + '/@' + latitude + ',' + longitude + ',17z', '_blank');
 }
 
 function load() {
-  try {
-    const d = localStorage.getItem('tc_data');
-    if (d) data = JSON.parse(d);
-  } catch(e) { data = []; }
+  try { const d = localStorage.getItem('tc_data'); if (d) data = JSON.parse(d); } catch(e) { data = []; }
 }
 
 function render() {
   const list = document.getElementById('list');
   list.innerHTML = '';
-  
   marks.forEach(m => map.removeLayer(m));
-  marks = [];  
+  marks = [];
   let total = 0;
   
   if (data.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small style="color:#475569">Нажми 🎤 ГОВОРИ и скажи "пицца 30 евро"</small></div>';
-  } else {
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small>Нажми 🎤 ГОВОРИ</small></div>';  } else {
     data.forEach(function(x) {
       total += x.eur || 0;
-      
       const div = document.createElement('div');
       div.className = 'item';
-      div.onclick = function() { openMap(x.lat, x.lng, x.loc); };
+      div.onclick = function() { openMap(x.lat, x.lng); };
       
       let locHtml = '';
       if (x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' && x.loc !== 'No GPS') {
-        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ',\'' + x.loc + '\')">📍 ' + x.loc + '</div>';
+        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ')">📍 ' + x.loc + '</div>';
       } else if (x.lat && x.lng) {
-        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ',\'Координаты\')">📍 ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) + '</div>';
+        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ')">📍 ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) + '</div>';
       }
       
-      div.innerHTML = '<div class="amount-row">' +
-          '<b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b>' +
-          '<span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span>' +
-        '</div>' +
+      div.innerHTML = '<div class="amount-row"><b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span></div>' +
         locHtml +
-        '<div class="cat">' + (CAT_ICONS[x.cat]||'📦') + ' • ' + new Date(x.date).toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'}) + '</div>' +
-        '<button class="red" onclick="event.stopPropagation();del(' + x.id + ')" style="padding:10px;margin-top:10px;font-size:1rem">🗑️ Удалить</button>';
+        '<div class="cat">' + CAT_ICONS[x.cat] + ' ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>' +
+        '<button class="red" onclick="event.stopPropagation();del(' + x.id + ')" style="padding:10px;margin-top:10px">🗑️ Удалить</button>';
       
       list.appendChild(div);
       
       if (x.lat && x.lng) {
         const m = L.marker([x.lat, x.lng]).addTo(map);
-        m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2) + '<br>' + (x.loc||''));
+        m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2));
         marks.push(m);
       }
     });
   }
   
   document.getElementById('tot').textContent = '€' + total.toFixed(2);
-  
-  if (marks.length > 0) {
-    const bounds = L.latLngBounds(marks.map(m => m.getLatLng()));
-    map.fitBounds(bounds.pad(0.1));
-  }
+  if (marks.length > 0) map.fitBounds(L.latLngBounds(marks.map(m => m.getLatLng())).pad(0.1));
 }
 
 function exp() {
   if (data.length === 0) { show('Нет данных'); return; }
   const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');  a.href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
   a.download = 'travelcar-' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
-  show('📤 Экспортировано ' + data.length + ' записей');
+  show('📤 Экспортировано');
 }
 
 function resetStatus() {
@@ -353,8 +341,7 @@ function resetStatus() {
   s.className = 'auto';
 }
 
-function show(msg) {
-  const t = document.getElementById('toast');
+function show(msg) {  const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.display = 'block';
   setTimeout(function() { t.style.display = 'none'; }, 3000);

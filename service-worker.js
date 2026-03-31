@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travelcar-v2';
+const CACHE_NAME = 'travelcar-v2.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,10 +11,12 @@ const STATIC_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
 ];
 
-// Install
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -23,7 +25,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(names => 
@@ -32,15 +33,10 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch
 self.addEventListener('fetch', event => {
   const { request } = event;
-  const url = new URL(request.url);
-  
-  // Skip non-GET
   if (request.method !== 'GET') return;
   
-  // Cache-first for static assets
   if (STATIC_ASSETS.some(a => request.url.includes(a.split('/').pop()))) {
     event.respondWith(
       caches.match(request).then(cached => cached || fetch(request))
@@ -48,7 +44,6 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // Network-first for API/data
   event.respondWith(
     fetch(request)
       .then(res => {
@@ -60,7 +55,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Background Sync
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-expenses') {
     event.waitUntil(syncPendingExpenses());
@@ -68,11 +62,9 @@ self.addEventListener('sync', event => {
 });
 
 async function syncPendingExpenses() {
-  // Placeholder for future offline sync logic
   console.log('Background sync: expenses');
 }
 
-// Push Notifications (optional)
 self.addEventListener('push', event => {
   const data = event.data?.json() || {};
   event.waitUntil(

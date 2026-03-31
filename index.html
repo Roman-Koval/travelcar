@@ -1,31 +1,211 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TravelCar</title>
-  <link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelCar CLOUD</title>
+
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f172a">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="manifest" href="manifest.json" />
+<style>
+body{margin:0;font-family:sans-serif;background:#0f172a;color:#fff}
+header{padding:15px;font-size:22px;font-weight:bold}
+.card{background:#1e293b;margin:10px;padding:12px;border-radius:12px}
+button{padding:12px;margin:5px;border-radius:10px;border:none;background:#22c55e;font-weight:bold}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
+#map{height:300px;margin:10px;border-radius:12px}
+</style>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 </head>
 <body>
 
-  <h1>🚗 TravelCar</h1>
+<header>🚗 TravelCar CLOUD</header>
 
-  <button id="voiceBtn">🎤 Записать расход</button>
+<div class="card">
+<button onclick="startVoice()">🎤 Голос</button>
+<button onclick="addExpense()">💾 Сохранить</button>
+<button onclick="exportData()">📤 Экспорт</button>
+</div>
 
-  <ul id="list"></ul>
+<div class="card">
+<input id="amount" placeholder="Сумма">
+<select id="currency">
+<option value="EUR">EUR</option>
+<option value="TRY">TRY</option>
+<option value="USD">USD</option>
+<option value="GBP">GBP</option>
+<option value="CHF">CHF</option>
+<option value="CZK">CZK</option>
+<option value="PLN">PLN</option>
+</select>
 
-  <div id="map"></div>
+<select id="category">
+<option value="food">🍔 Еда</option>
+<option value="fuel">⛽ Топливо</option>
+<option value="hotel">🏨 Жильё</option>
+<option value="other">📦 Прочее</option>
+</select>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="app.js"></script>
+<input id="comment">
+<input id="location">
+</div>
+
+<div id="stats" class="card"></div>
+<div id="list" class="card"></div>
+<div id="map"></div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+
+// 🔥 ВСТАВЬ СВОЙ CONFIG СЮДА
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+
+// 🔐 Анонимная авторизация
+firebase.auth().signInAnonymously();
+
+let expenses = [];
+
+const map = L.map('map').setView([50,10],4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+// ===== СИНХРОНИЗАЦИЯ =====
+firebase.auth().onAuthStateChanged(user=>{
+ if(user){
+  db.collection('expenses').orderBy('date')
+    .onSnapshot(snapshot=>{
+      expenses = snapshot.docs.map(d=>d.data());
+      render();
+    });
+ }
+});
+
+// ===== ГОЛОС =====
+function startVoice(){
+ const r=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
+ r.lang='ru-RU';
+ r.onresult=e=>{
+  const t=e.results[0][0].transcript;
+  const p=parse(t);
+  amount.value=p.amount;
+  currency.value=p.currency;
+  category.value=p.category;
+  comment.value=t;
+  getGeo();
+ };
+ r.start();
+}
+
+function parse(t){
+ const amount=parseFloat((t.match(/\d+/)||[0])[0]);
+ let currency='EUR';
+ if(/лир/i.test(t))currency='TRY';
+ if(/дол/i.test(t))currency='USD';
+ if(/фунт/i.test(t))currency='GBP';
+
+ let category='other';
+ if(/еда|кофе/i.test(t))category='food';
+ if(/бензин/i.test(t))category='fuel';
+ if(/отель/i.test(t))category='hotel';
+
+ return{amount,currency,category};
+}
+
+// ===== GEO =====
+function getGeo(){
+ navigator.geolocation.getCurrentPosition(async pos=>{
+  const lat=pos.coords.latitude;
+  const lng=pos.coords.longitude;
+  window._lat=lat;window._lng=lng;
+
+  const res=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+  const d=await res.json();
+  location.value=d.address.city||'';
+ });
+}
+
+// ===== FX =====
+async function convert(amount,currency){
+ const res=await fetch('https://api.exchangerate.host/latest?base=EUR');
+ const data=await res.json();
+ if(currency==='EUR')return amount;
+ return amount/(data.rates[currency]||1);
+}
+
+// ===== ADD =====
+async function addExpense(){
+ const eur=await convert(+amount.value,currency.value);
+
+ await db.collection('expenses').add({
+  amount:+amount.value,
+  currency:currency.value,
+  category:category.value,
+  eur,
+  comment:comment.value,
+  city:location.value,
+  lat:window._lat,
+  lng:window._lng,
+  date:new Date()
+ });
+}
+
+// ===== UI =====
+function render(){
+ list.innerHTML='';
+ stats.innerHTML='';
+ let total=0;
+ const pts=[];
+
+ expenses.forEach(e=>{
+  total+=e.eur;
+
+  const div=document.createElement('div');
+  div.innerHTML=`${e.amount} ${e.currency} (€${e.eur.toFixed(2)}) ${e.city}`;
+  list.appendChild(div);
+
+  if(e.lat){
+   pts.push([e.lat,e.lng]);
+   L.marker([e.lat,e.lng]).addTo(map);
+  }
+ });
+
+ stats.innerHTML=`💰 €${total.toFixed(2)}`;
+
+ if(pts.length>1){
+  L.polyline(pts).addTo(map);
+  map.fitBounds(pts);
+ }
+}
+
+// ===== EXPORT =====
+function exportData(){
+ const blob=new Blob([JSON.stringify(expenses)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='travel.json';
+ a.click();
+}
+
+if('serviceWorker'in navigator){
+ navigator.serviceWorker.register('service-worker.js');
+}
+
+</script>
 </body>
 </html>

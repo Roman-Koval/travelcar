@@ -376,3 +376,25 @@ body.dark .exp-amount {
 body.dark .modal {
     background: rgba(0,0,0,0.7);
 }
+#loader {
+  position: fixed;
+  inset: 0;
+  background: #1f1f1f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #4a90e2;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

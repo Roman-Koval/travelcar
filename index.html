@@ -22,7 +22,6 @@
   <!-- Preconnect -->
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="preconnect" href="https://www.gstatic.com" />
 </head>
 <body>
   <!-- Online/Offline Indicator -->
@@ -96,8 +95,8 @@
         <button type="button" id="geoBtn" class="btn btn-sm">📍 Определить координаты</button>
         
         <input type="file" id="expPhoto" accept="image/*" capture="environment" />
-        <div id="photoPreview" class="photo-preview"></div>        
-        <div class="voice-input">
+        <div id="photoPreview" class="photo-preview"></div>
+                <div class="voice-input">
           <button type="button" id="voiceBtn" class="btn btn-voice">🎤 Голосовой ввод</button>
           <span id="voiceStatus"></span>
         </div>
@@ -145,8 +144,8 @@
           <div class="stat-icon">💰</div>
           <div class="stat-value" id="statTotal">0</div>
           <div class="stat-label">Всего <span class="currency">RUB</span></div>
-        </div>        <div class="stat-card">
-          <div class="stat-icon">📊</div>
+        </div>
+        <div class="stat-card">          <div class="stat-icon">📊</div>
           <div class="stat-value" id="statAvg">0</div>
           <div class="stat-label">В день</div>
         </div>
@@ -165,20 +164,37 @@
 
     <!-- Export Buttons -->
     <section id="exportSection" class="export-section hidden">
-      <h3>📤 Экспорт</h3>
+      <h3>📤 Экспорт и Синхронизация</h3>
       <div class="export-buttons">
-        <button id="exportCSV" class="btn btn-outline">📄 CSV</button>
+        <button id="exportQR" class="btn btn-outline">📱 QR-код</button>
         <button id="exportJSON" class="btn btn-outline">📋 JSON</button>
+        <button id="importJSON" class="btn btn-outline">📥 Импорт</button>
         <button id="exportPDF" class="btn btn-outline">📕 PDF</button>
       </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" />
+    </section>
+
+    <!-- P2P Sync Section -->
+    <section id="p2pSync" class="p2p-sync hidden">
+      <h3>🔄 P2P Синхронизация</h3>
+      <div class="sync-options">
+        <button id="createRoom" class="btn btn-primary">🏠 Создать комнату</button>
+        <button id="joinRoom" class="btn btn-outline">🚪 Войти в комнату</button>
+      </div>
+      <div id="roomInfo" class="room-info hidden">
+        <p>Код комнаты: <strong id="roomCode"></strong></p>
+        <p>Поделитесь кодом с другим устройством</p>
+        <div id="qrRoom"></div>
+        <button id="leaveRoom" class="btn btn-sm">❌ Выйти</button>
+      </div>
+      <div id="peerStatus" class="peer-status"></div>
     </section>
 
   </main>
 
   <!-- Floating Action Button -->
   <button id="addExpenseFab" class="fab hidden">➕</button>
-
-  <!-- Voice Trigger (Minimal) -->
+  <!-- Voice Trigger -->
   <button id="voiceTrigger" class="voice-trigger" title="Нажми и скажи: бензин 2500 рублей">🎤</button>
 
   <!-- Toast Container -->
@@ -191,10 +207,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   
   <script src="app.js"></script>
   

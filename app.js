@@ -35,6 +35,7 @@ async function requestPushPermission() {
     });
   }
 }
+requestPushPermission();
 
 // ===============================
 // 2. Тема (Dark / Light)

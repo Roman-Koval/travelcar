@@ -1,126 +1,201 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TravelCar 2.0+</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4a90e2">
-<link rel="apple-touch-icon" href="travelcar-icon-512.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TravelCar — Учёт расходов в поездках</title>
+  <meta name="description" content="Приложение для учёта расходов в автопутешествиях" />
+  <meta name="theme-color" content="#4a90e2" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TravelCar" />
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="travelcar-icon-192.png" />
+  <link rel="apple-touch-icon" href="travelcar-icon-192.png" />
+  
+  <!-- External Libraries -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 </head>
 <body>
-<div id="loader">
-  <div class="spinner"></div>
-</div>
-<header>
-    <h1>TRAVEL.CAR</h1>
+  <!-- Online/Offline Indicator -->
+  <div id="onlineIndicator" class="online-indicator">🟢 Онлайн</div>
 
-    <div class="theme-toggle">
-        <button id="toggleTheme">🌓</button>
+  <!-- Header -->
+  <header class="header">
+    <h1>🚗 TravelCar</h1>
+    <div class="header-actions">
+      <button id="themeToggle" class="icon-btn" title="Сменить тему">🌓</button>
+      <button id="backupBtn" class="icon-btn" title="Бэкап">💾</button>
     </div>
+  </header>
 
-    <div class="trip-selector">
-        <select id="tripSelect"></select>
-        <button id="newTripBtn">+</button>
-    </div>
-</header>
+  <!-- Main Content -->
+  <main class="container">
+    
+    <!-- Trip Selector -->
+    <section class="trip-selector">
+      <select id="tripSelect">
+        <option value="">+ Новая поездка</option>
+      </select>
+      <button id="newTripBtn" class="btn btn-primary">➕ Поездка</button>
+    </section>
 
-<section class="add-expense" id="add">
-    <h2>Добавить расход</h2>
-
-    <input type="text" id="expTitle" placeholder="Название">
-    <input type="number" id="expAmount" placeholder="Сумма">
-    <select id="expCategory">
-        <option value="fuel">Топливо</option>
-        <option value="food">Еда</option>
-        <option value="hotel">Жильё</option>
-        <option value="toll">Платные дороги</option>
-        <option value="parking">Парковка</option>
-        <option value="other">Другое</option>
-    </select>
-
-    <div class="row">
-        <input type="number" id="tripBudget" placeholder="Бюджет поездки">
-        <button id="saveBudgetBtn">💰</button>
-    </div>
-
-    <div class="row">
-        <input type="file" id="expPhoto" accept="image/*">
-        <button id="voiceInputBtn">🎤</button>
-    </div>
-
-    <button id="addExpenseBtn">Добавить</button>
-</section>
-
-<section class="expense-list">
-    <h2>Расходы</h2>
-
-    <div class="export-buttons">
-        <button id="exportCSV">Экспорт CSV</button>
-        <button id="exportJSON">Экспорт JSON</button>
-        <button id="exportPDF">Экспорт PDF</button>
-        <button id="shareTrip">Поделиться</button>
-    </div>
-
-    <div class="backup-row">
-        <button id="exportAllBtn">Бэкап всех данных</button>
-        <label class="import-label">
-            Импорт
-            <input type="file" id="importAllInput" accept="application/json">
-        </label>
-    </div>
-
-    <div id="expenseList"></div>
-</section>
-
-<section class="analytics">
-    <h2>Аналитика</h2>
-    <div class="analytics-row">
-        <canvas id="categoryChart"></canvas>
-        <canvas id="dailyChart"></canvas>
-    </div>
-    <p id="baseCurrencySummary"></p>
-</section>
-
-<section class="map-section" id="map">
-    <h2>Карта расходов</h2>
-    <div id="tripMap"></div>
-</section>
-
-<div id="expenseModal" class="modal hidden">
-    <div class="modal-content">
-        <span id="closeModal" class="close">&times;</span>
-
-        <h3 id="modalTitle"></h3>
-        <p><strong>Сумма:</strong> <span id="modalAmount"></span></p>
-        <p><strong>Категория:</strong> <span id="modalCategory"></span></p>
-        <p><strong>Дата:</strong> <span id="modalDate"></span></p>
-        <p><strong>Место:</strong> <span id="modalLocation"></span></p>
-
-        <div id="modalPhotoWrapper">
-            <img id="modalPhoto" class="modal-photo" alt="">
+    <!-- Active Trip Info -->    <section id="tripInfo" class="trip-info hidden">
+      <h2 id="tripTitle">Название поездки</h2>
+      <p id="tripDates">📅 Даты</p>
+      <p id="tripLocation">📍 Место</p>
+      <div class="budget-control">
+        <label>Бюджет: <input type="number" id="tripBudget" placeholder="0" step="0.01" /> <span id="tripCurrency">RUB</span></label>
+        <div id="budgetProgress" class="budget-progress">
+          <div class="budget-bar" id="budgetBar"></div>
         </div>
+        <span id="budgetStatus" class="budget-status"></span>
+      </div>
+    </section>
 
-        <div id="modalMap" class="map"></div>
-    </div>
-</div>
+    <!-- Map -->
+    <section id="mapSection" class="map-section hidden">
+      <div id="map" class="map"></div>
+      <button id="locateBtn" class="btn btn-sm">📍 Моё местоположение</button>
+    </section>
 
-<!-- Библиотеки -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Add Expense Form -->
+    <section id="expenseForm" class="expense-form hidden">
+      <h3>💰 Добавить расход</h3>
+      <form id="addExpenseForm">
+        <input type="text" id="expTitle" placeholder="Название (напр. Бензин)" required />
+        
+        <div class="row">
+          <input type="number" id="expAmount" placeholder="Сумма" step="0.01" required />
+          <select id="expCategory">
+            <option value="fuel">⛽ Топливо</option>
+            <option value="food">🍽️ Еда</option>
+            <option value="accommodation">🏨 Жильё</option>
+            <option value="tolls">🛣️ Платные дороги</option>
+            <option value="repairs">🔧 Ремонт</option>
+            <option value="entertainment">🎭 Развлечения</option>
+            <option value="other">📦 Другое</option>
+          </select>
+        </div>
+        
+        <div class="row">
+          <input type="date" id="expDate" required />
+          <input type="time" id="expTime" required />
+        </div>
+        
+        <input type="text" id="expLocation" placeholder="📍 Место (или используйте геолокацию)" />
+        <button type="button" id="geoBtn" class="btn btn-sm">📍 Определить координаты</button>
+        
+        <input type="file" id="expPhoto" accept="image/*" capture="environment" />
+        <div id="photoPreview" class="photo-preview"></div>
+        
+        <div class="voice-input">          <button type="button" id="voiceBtn" class="btn btn-voice">🎤 Голосовой ввод</button>
+          <span id="voiceStatus"></span>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">💾 Сохранить расход</button>
+      </form>
+    </section>
 
-<script src="app.js"></script>
-    <script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
-}
-</script>
+    <!-- Filters -->
+    <section id="filters" class="filters hidden">
+      <input type="text" id="searchExpenses" placeholder="🔍 Поиск..." />
+      <select id="filterCategory">
+        <option value="">Все категории</option>
+        <option value="fuel">⛽ Топливо</option>
+        <option value="food">🍽️ Еда</option>
+        <option value="accommodation">🏨 Жильё</option>
+        <option value="tolls">🛣️ Платные дороги</option>
+        <option value="repairs">🔧 Ремонт</option>
+        <option value="entertainment">🎭 Развлечения</option>
+        <option value="other">📦 Другое</option>
+      </select>
+      <select id="sortBy">
+        <option value="date-desc">📅 Новые</option>
+        <option value="date-asc">📅 Старые</option>
+        <option value="amount-desc">💰 Дорогие</option>
+        <option value="amount-asc">💰 Дешёвые</option>
+      </select>
+    </section>
+
+    <!-- Expenses List -->
+    <section id="expensesSection" class="expenses-section hidden">
+      <h3>📋 Расходы (<span id="expenseCount">0</span>)</h3>
+      <div id="expenseList" class="expense-list"></div>
+    </section>
+
+    <!-- Analytics -->
+    <section id="analytics" class="analytics hidden">
+      <h3>📊 Аналитика</h3>
+      <canvas id="categoryChart"></canvas>
+      <canvas id="dailyChart"></canvas>
+      
+      <!-- Stats Cards -->
+      <div class="trip-stats">
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Всего <span class="currency">RUB</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>          <div class="stat-value" id="statAvg">0</div>
+          <div class="stat-label">В день</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value" id="statCount">0</div>
+          <div class="stat-label">Расходов</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="statTop">-</div>
+          <div class="stat-label">Топ категория</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Export Buttons -->
+    <section id="exportSection" class="export-section hidden">
+      <h3>📤 Экспорт</h3>
+      <div class="export-buttons">
+        <button id="exportCSV" class="btn btn-outline">📄 CSV</button>
+        <button id="exportJSON" class="btn btn-outline">📋 JSON</button>
+        <button id="exportPDF" class="btn btn-outline">📕 PDF</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating Action Button -->
+  <button id="addExpenseFab" class="fab hidden">➕</button>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Modals -->
+  <div id="modalContainer"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+  
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW failed:', err));      });
+    }
+  </script>
 </body>
 </html>

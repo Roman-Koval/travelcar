@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>TravelCar — Учёт расходов в поездках</title>
-  <meta name="description" content="Приложение для учёта расходов в автопутешествиях" />
+  <meta name="description" content="Приложение для учёта расходов в автопутешествиях с голосовым вводом" />
   <meta name="theme-color" content="#4a90e2" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="TravelCar" />
   
-  <!-- PWA Manifest -->
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="travelcar-icon-192.png" />
   <link rel="apple-touch-icon" href="travelcar-icon-192.png" />
@@ -19,9 +19,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
   
-  <!-- Preconnect for performance -->
+  <!-- Preconnect -->
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://www.gstatic.com" />
 </head>
 <body>
   <!-- Online/Offline Indicator -->
@@ -32,6 +33,7 @@
     <h1>🚗 TravelCar</h1>
     <div class="header-actions">
       <button id="themeToggle" class="icon-btn" title="Сменить тему">🌓</button>
+      <button id="syncBtn" class="icon-btn" title="Синхронизация">🔄</button>
       <button id="backupBtn" class="icon-btn" title="Бэкап">💾</button>
     </div>
   </header>
@@ -46,8 +48,8 @@
       </select>
       <button id="newTripBtn" class="btn btn-primary">➕ Поездка</button>
     </section>
-
-    <!-- Active Trip Info -->    <section id="tripInfo" class="trip-info hidden">
+    <!-- Active Trip Info -->
+    <section id="tripInfo" class="trip-info hidden">
       <h2 id="tripTitle">Название поездки</h2>
       <p id="tripDates">📅 Даты</p>
       <p id="tripLocation">📍 Место</p>
@@ -94,9 +96,9 @@
         <button type="button" id="geoBtn" class="btn btn-sm">📍 Определить координаты</button>
         
         <input type="file" id="expPhoto" accept="image/*" capture="environment" />
-        <div id="photoPreview" class="photo-preview"></div>
-        
-        <div class="voice-input">          <button type="button" id="voiceBtn" class="btn btn-voice">🎤 Голосовой ввод</button>
+        <div id="photoPreview" class="photo-preview"></div>        
+        <div class="voice-input">
+          <button type="button" id="voiceBtn" class="btn btn-voice">🎤 Голосовой ввод</button>
           <span id="voiceStatus"></span>
         </div>
         
@@ -143,9 +145,9 @@
           <div class="stat-icon">💰</div>
           <div class="stat-value" id="statTotal">0</div>
           <div class="stat-label">Всего <span class="currency">RUB</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📊</div>          <div class="stat-value" id="statAvg">0</div>
+        </div>        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="statAvg">0</div>
           <div class="stat-label">В день</div>
         </div>
         <div class="stat-card">
@@ -176,6 +178,9 @@
   <!-- Floating Action Button -->
   <button id="addExpenseFab" class="fab hidden">➕</button>
 
+  <!-- Voice Trigger (Minimal) -->
+  <button id="voiceTrigger" class="voice-trigger" title="Нажми и скажи: бензин 2500 рублей">🎤</button>
+
   <!-- Toast Container -->
   <div id="toastContainer"></div>
 
@@ -186,6 +191,11 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  
   <script src="app.js"></script>
   
   <!-- Register Service Worker -->
@@ -193,8 +203,9 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('SW registered:', reg.scope))
-          .catch(err => console.log('SW failed:', err));      });
+          .then(reg => console.log('✅ SW registered:', reg.scope))
+          .catch(err => console.log('❌ SW failed:', err));
+      });
     }
   </script>
 </body>

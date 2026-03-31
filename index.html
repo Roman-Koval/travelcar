@@ -6,22 +6,24 @@
 <title>TravelCar</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:sans-serif;background:#0f172a;color:#fff;padding:15px}
+body{font-family:-apple-system,sans-serif;background:#0f172a;color:#fff;padding:15px}
 h1{margin-bottom:15px;font-size:1.3rem}
 button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:12px;font-size:1.1rem;cursor:pointer}
 .green{background:#22c55e;color:#fff}
 .blue{background:#3b82f6;color:#fff}
 .red{background:#ef4444;color:#fff}
 input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#fff;font-size:1rem}
-.item{background:#1e293b;padding:12px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e;cursor:pointer;transition:transform 0.2s}
-.item:active{transform:scale(0.98)}
+.item{background:#1e293b;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e;cursor:pointer}
 .item:hover{border-left-color:#3b82f6}
 #map{height:200px;border-radius:8px;background:#1e293b;margin-top:10px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 20px;border-radius:30px;display:none;z-index:9999}
-.auto{background:#1e3a5f;padding:10px;border-radius:8px;margin:10px 0;text-align:center;font-size:0.9rem}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 24px;border-radius:30px;display:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.auto{background:#1e3a5f;padding:12px;border-radius:10px;margin:10px 0;text-align:center;font-size:0.95rem}
 .auto.on{background:#166534}
-.loc{color:#94a3b8;font-size:0.85rem}
-.loc.clickable{color:#3b82f6;text-decoration:underline}
+.loc{color:#94a3b8;font-size:0.9rem;margin:5px 0}
+.loc.clickable{color:#60a5fa;cursor:pointer}
+.cat{font-size:0.85rem;color:#666;margin:5px 0}
+.amount-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.eur-amount{color:#22c55e;font-weight:bold;font-size:1.1rem}
 </style>
 </head>
 <body>
@@ -31,7 +33,7 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <div class="auto" id="autoStatus">🎤 Готов к голосовому вводу</div>
 
 <button class="blue" onclick="speak()">🎤 ГОВОРИ</button>
-<div id="txt" style="text-align:center;color:#94a3b8;margin:10px 0;"></div>
+<div id="txt" style="text-align:center;color:#94a3b8;margin:10px 0;min-height:20px"></div>
 
 <label>💰 Сумма</label>
 <input type="number" id="amt" placeholder="0" step="0.01">
@@ -45,9 +47,9 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 </select>
 
 <label>Категория</label>
-<select id="cat">
-  <option value="food">🍔 Еда</option>
-  <option value="fuel">⛽ Топливо</option>  <option value="hotel">🏨 Жильё</option>
+<select id="cat">  <option value="food">🍔 Еда</option>
+  <option value="fuel">⛽ Топливо</option>
+  <option value="hotel">🏨 Жильё</option>
   <option value="other">📦 Прочее</option>
 </select>
 
@@ -59,7 +61,7 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <button class="red" onclick="clr()">🗑️ ОЧИСТИТЬ</button>
 
 <div id="list" style="margin-top:20px"></div>
-<div id="tot" style="text-align:center;font-size:1.5rem;margin:15px 0;color:#22c55e">€0.00</div>
+<div id="tot" style="text-align:center;font-size:1.5rem;margin:15px 0;color:#22c55e;font-weight:bold">€0.00</div>
 <div id="map"></div>
 <div id="toast"></div>
 
@@ -69,42 +71,34 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <script>
 let data = [], map, marks = [], lat, lng;
 
-// Currency rates TO EUR (1 unit = X EUR)
-const EUR_RATES = {
-  EUR: 1,
-  USD: 0.92,
-  TRY: 0.029,
-  GBP: 1.17
-};
+const EUR_RATES = { EUR: 1, USD: 0.92, TRY: 0.029, GBP: 1.17 };
+const CUR_SYMBOLS = { EUR: '€', USD: '$', TRY: '₺', GBP: '£' };
+const CAT_ICONS = { food: '🍔', fuel: '⛽', hotel: '🏨', other: '📦' };
 
-// Init
 window.onload = function() {
-  console.log('LOAD');
   map = L.map('map').setView([50, 10], 4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   load();
   render();
-  console.log('READY');
 };
 
-// Voice
 function speak() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert('Открой в Chrome'); return; }
+  if (!SR) { alert('Используйте Google Chrome'); return; }
   
   const r = new SR();
   r.lang = 'ru-RU';
   
   const txt = document.getElementById('txt');
-  const status = document.getElementById('autoStatus');  
+  const status = document.getElementById('autoStatus');
+  
   txt.textContent = '🔴 Слушаю...';
   status.textContent = '🎤 Говорите сейчас...';
   status.className = 'auto';
   
-  r.onresult = async function(e) {
-    const t = e.results[0][0].transcript;
+  r.onresult = async function(e) {    const t = e.results[0][0].transcript;
     txt.textContent = '"' + t + '"';
-    status.textContent = '✅ "' + t + '"';
+    status.textContent = '✅ Распознано: "' + t + '"';
     status.className = 'auto on';
     
     // Parse amount
@@ -119,15 +113,15 @@ function speak() {
     
     // Parse category
     let cat = 'food';
-    if (/бензин|топливо|газ|fuel/i.test(t)) cat = 'fuel';
-    else if (/отель|гостиниц|жильё|hotel/i.test(t)) cat = 'hotel';
-    else if (/транспорт|метро|автобус|такси/i.test(t)) cat = 'other';
+    if (/бензин|топливо|газ|fuel|petrol/i.test(t)) cat = 'fuel';
+    else if (/отель|гостиниц|жильё|hotel|ночлег/i.test(t)) cat = 'hotel';
+    else if (/транспорт|метро|автобус|такси|taxi|metro/i.test(t)) cat = 'other';
     
     document.getElementById('amt').value = amt;
     document.getElementById('cur').value = cur;
     document.getElementById('cat').value = cat;
     
-    status.textContent = '📍 GPS...';
+    status.textContent = '📍 Определение города...';
     
     // Get location
     if (navigator.geolocation) {
@@ -139,69 +133,70 @@ function speak() {
           const res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&addressdetails=1&accept-language=ru');
           const d = await res.json();
           
-          // Try to get city/town/village
-          const city = d.address?.city || d.address?.town || d.address?.village || d.address?.municipality || d.address?.county;
+          // Get city/town/village name
+          let placeName = d.address?.city || 
+                         d.address?.town || 
+                         d.address?.village || 
+                         d.address?.municipality || 
+                         d.address?.county || 
+                         d.address?.state_district ||
+                         '';
           
-          if (city) {
-            document.getElementById('loc').value = city;
-          } else {
-            // Show coordinates if no city            document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
+          if (placeName) {
+            document.getElementById('loc').value = placeName;
+            status.textContent = '📍 ' + placeName;
+          } else {            document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
           }
         } catch(e) {
           console.warn('Geo error:', e);
           document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
         }
         
-        // Auto save
-        status.textContent = '💾 Сохранение...';
-        setTimeout(function() {
-          autoSave();
-        }, 800);
+        status.textContent = '💾 Авто-сохранение...';
+        setTimeout(autoSave, 1000);
       }, function(err) {
         console.warn('GPS error:', err);
         document.getElementById('loc').value = 'GPS off';
         status.textContent = '💾 Сохранение (без GPS)...';
-        setTimeout(function() {
-          autoSave();
-        }, 800);
-      }, { timeout: 8000, enableHighAccuracy: true });
+        setTimeout(autoSave, 1000);
+      }, { timeout: 10000, enableHighAccuracy: true });
     } else {
       document.getElementById('loc').value = 'No GPS';
-      setTimeout(autoSave, 800);
+      setTimeout(autoSave, 1000);
     }
   };
   
   r.onerror = function(e) {
-    txt.textContent = 'Ошибка: ' + e.error;
-    status.textContent = '❌ Ошибка';
-    setTimeout(function() { 
-      status.textContent = '🎤 Готов к голосовому вводу';
-      status.className = 'auto';
-    }, 2000);
+    console.error('Voice error:', e.error);
+    document.getElementById('txt').textContent = 'Ошибка: ' + e.error;
+    document.getElementById('autoStatus').textContent = '❌ Ошибка распознавания';
+    setTimeout(resetStatus, 2000);
   };
   
   r.onend = function() {
-    setTimeout(function() { txt.textContent = ''; }, 2000);
+    setTimeout(function() { document.getElementById('txt').textContent = ''; }, 2000);
   };
   
-  r.start();
+  try { r.start(); }
+  catch(e) { 
+    console.error(e); 
+    alert('Ошибка запуска распознавания'); 
+    resetStatus(); 
+  }
 }
 
-// Auto save
 function autoSave() {
   const amt = parseFloat(document.getElementById('amt').value);
   if (!amt || amt <= 0) {
     show('❌ Не распознана сумма');
     resetStatus();
     return;
-  }  
-  const cur = document.getElementById('cur').value;
-  const cat = document.getElementById('cat').value;
-  const loc = document.getElementById('loc').value;
+  }
   
-  // Convert to EUR
-  const rate = EUR_RATES[cur] || 1;
-  const eur = amt * rate;
+  const cur = document.getElementById('cur').value;
+  const cat = document.getElementById('cat').value;  const loc = document.getElementById('loc').value;
+  
+  const eur = amt * (EUR_RATES[cur] || 1);
   
   data.unshift({
     id: Date.now(),
@@ -220,14 +215,13 @@ function autoSave() {
   document.getElementById('amt').value = '';
   document.getElementById('loc').value = '';
   
-  show('✅ ' + amt + ' ' + cur + ' = €' + eur.toFixed(2));
-  status.textContent = '✅ Сохранено!';
+  show('✅ ' + CUR_SYMBOLS[cur] + amt + ' ' + cur + ' = €' + eur.toFixed(2));
+  document.getElementById('autoStatus').textContent = '✅ Сохранено!';
   setTimeout(resetStatus, 2000);
   
   render();
 }
 
-// Manual save
 function save() {
   const amt = parseFloat(document.getElementById('amt').value);
   if (!amt || amt <= 0) {
@@ -239,18 +233,17 @@ function save() {
   const cat = document.getElementById('cat').value;
   const loc = document.getElementById('loc').value;
   
-  const rate = EUR_RATES[cur] || 1;
-  const eur = amt * rate;
+  const eur = amt * (EUR_RATES[cur] || 1);
   
   data.unshift({
-    id: Date.now(),    amt: amt,
+    id: Date.now(),
+    amt: amt,
     cur: cur,
     cat: cat,
     eur: eur,
     loc: loc,
     lat: lat,
-    lng: lng,
-    date: new Date().toISOString()
+    lng: lng,    date: new Date().toISOString()
   });
   
   localStorage.setItem('tc_data', JSON.stringify(data));
@@ -258,63 +251,55 @@ function save() {
   document.getElementById('amt').value = '';
   document.getElementById('loc').value = '';
   
-  show('✅ ' + amt + ' ' + cur + ' = €' + eur.toFixed(2));
+  show('✅ ' + CUR_SYMBOLS[cur] + amt + ' ' + cur + ' = €' + eur.toFixed(2));
   render();
 }
 
-// Delete
 function del(id) {
-  if (!confirm('Удалить?')) return;
+  if (!confirm('Удалить запись?')) return;
   data = data.filter(x => x.id !== id);
   localStorage.setItem('tc_data', JSON.stringify(data));
   render();
+  show('🗑️ Удалено');
 }
 
-// Clear all
 function clr() {
-  if (!confirm('Очистить ВСЁ?')) return;
+  if (!confirm('Очистить ВСЕ записи?')) return;
   data = [];
   localStorage.removeItem('tc_data');
   render();
-  show('🗑️ Очищено');
+  show('🗑️ Всё очищено');
 }
 
-// Open in Google Maps
-function openMap(lat, lng, loc) {
-  if (!lat || !lng) {
+function openMap(latitude, longitude, location) {
+  if (!latitude || !longitude) {
     show('📍 Нет координат');
     return;
   }
-  
-  const url = 'https://www.google.com/maps/place/' + lat + ',' + lng + '/@' + lat + ',' + lng + ',17z';
+  const url = 'https://www.google.com/maps/place/' + latitude + ',' + longitude + '/@' + latitude + ',' + longitude + ',17z';
   window.open(url, '_blank');
 }
 
-// Load
 function load() {
-  try {    const d = localStorage.getItem('tc_data');
+  try {
+    const d = localStorage.getItem('tc_data');
     if (d) data = JSON.parse(d);
   } catch(e) { data = []; }
 }
 
-// Render
 function render() {
   const list = document.getElementById('list');
   list.innerHTML = '';
   
   marks.forEach(m => map.removeLayer(m));
-  marks = [];
-  
-  let tot = 0;
+  marks = [];  
+  let total = 0;
   
   if (data.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:20px">Нет записей<br><small>Нажми 🎤 ГОВОРИ</small></div>';
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small style="color:#475569">Нажми 🎤 ГОВОРИ и скажи "пицца 30 евро"</small></div>';
   } else {
     data.forEach(function(x) {
-      tot += x.eur || 0;
-      
-      const cats = {food:'🍔',fuel:'⛽',hotel:'🏨',other:'📦'};
-      const curSymbols = {EUR:'€',USD:'$',TRY:'₺',GBP:'£'};
+      total += x.eur || 0;
       
       const div = document.createElement('div');
       div.className = 'item';
@@ -324,55 +309,55 @@ function render() {
       if (x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' && x.loc !== 'No GPS') {
         locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ',\'' + x.loc + '\')">📍 ' + x.loc + '</div>';
       } else if (x.lat && x.lng) {
-        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ',\'' + x.lat.toFixed(4) + ',' + x.lng.toFixed(4) + '\')">📍 ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) + '</div>';
+        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ',\'Координаты\')">📍 ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) + '</div>';
       }
       
-      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:1.1rem">' + curSymbols[x.cur] + x.amt + ' ' + x.cur + '</b></div><span style="color:#22c55e;font-weight:bold">€' + (x.eur||0).toFixed(2) + '</span></div>' +
+      div.innerHTML = '<div class="amount-row">' +
+          '<b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b>' +
+          '<span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span>' +
+        '</div>' +
         locHtml +
-        '<div style="font-size:0.85rem;color:#666;margin:5px 0">' + (cats[x.cat]||'📦') + ' • ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>' +
-        '<button class="red" onclick="event.stopPropagation();del(' + x.id + ')" style="padding:8px;margin-top:8px">🗑️ Удалить</button>';
+        '<div class="cat">' + (CAT_ICONS[x.cat]||'📦') + ' • ' + new Date(x.date).toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'}) + '</div>' +
+        '<button class="red" onclick="event.stopPropagation();del(' + x.id + ')" style="padding:10px;margin-top:10px;font-size:1rem">🗑️ Удалить</button>';
       
       list.appendChild(div);
       
       if (x.lat && x.lng) {
         const m = L.marker([x.lat, x.lng]).addTo(map);
-        m.bindPopup('<b>' + curSymbols[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2) + '<br>' + (x.loc||''));
+        m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2) + '<br>' + (x.loc||''));
         marks.push(m);
       }
     });
   }
-    document.getElementById('tot').textContent = '€' + tot.toFixed(2);
+  
+  document.getElementById('tot').textContent = '€' + total.toFixed(2);
   
   if (marks.length > 0) {
-    const b = L.latLngBounds(marks.map(m => m.getLatLng()));
-    map.fitBounds(b.pad(0.1));
+    const bounds = L.latLngBounds(marks.map(m => m.getLatLng()));
+    map.fitBounds(bounds.pad(0.1));
   }
 }
 
-// Export
 function exp() {
   if (data.length === 0) { show('Нет данных'); return; }
   const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const a = document.createElement('a');  a.href = URL.createObjectURL(blob);
   a.download = 'travelcar-' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
-  show('📤 Экспортировано');
+  show('📤 Экспортировано ' + data.length + ' записей');
 }
 
-// Reset status
 function resetStatus() {
   const s = document.getElementById('autoStatus');
   s.textContent = '🎤 Готов к голосовому вводу';
   s.className = 'auto';
 }
 
-// Toast
 function show(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 2500);
+  setTimeout(function() { t.style.display = 'none'; }, 3000);
 }
 </script>
 

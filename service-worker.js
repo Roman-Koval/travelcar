@@ -37,3 +37,12 @@ self.addEventListener("fetch", (event) => {
     )
   );
 });
+self.addEventListener("push", event => {
+  const data = event.data?.json() || {};
+  event.waitUntil(
+    self.registration.showNotification(data.title || "TravelCar", {
+      body: data.body || "Новое уведомление",
+      icon: "travelcar-icon-192.png"
+    })
+  );
+});

@@ -15,12 +15,16 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:12px;font-
 input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#fff;font-size:1rem}
 .item{background:#1e293b;padding:12px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e}
 #map{height:200px;border-radius:8px;background:#1e293b;margin-top:10px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 20px;border-radius:30px;display:none}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 20px;border-radius:30px;display:none;z-index:9999}
+.auto{background:#1e3a5f;padding:10px;border-radius:8px;margin:10px 0;text-align:center;font-size:0.9rem}
+.auto.on{background:#166534}
 </style>
 </head>
 <body>
 
 <h1>🚗 TravelCar</h1>
+
+<div class="auto" id="autoStatus">🎤 Готов к голосовому вводу</div>
 
 <button class="blue" onclick="speak()">🎤 ГОВОРИ</button>
 <div id="txt" style="text-align:center;color:#94a3b8;margin:10px 0;"></div>
@@ -44,10 +48,10 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 
 <label>📍 Город</label>
 <input type="text" id="loc" placeholder="Авто..." readonly>
-
-<button class="green" onclick="save()">💾 СОХРАНИТЬ</button>
+<button class="green" onclick="save()">💾 СОХРАНИТЬ ВРУЧНУЮ</button>
 <button class="blue" onclick="exp()">📤 ЭКСПОРТ</button>
 <button class="red" onclick="clr()">🗑️ ОЧИСТИТЬ</button>
+
 <div id="list" style="margin-top:20px"></div>
 <div id="tot" style="text-align:center;font-size:1.5rem;margin:15px 0;color:#22c55e">€0.00</div>
 <div id="map"></div>
@@ -77,16 +81,22 @@ function speak() {
   const r = new SR();
   r.lang = 'ru-RU';
   
-  document.getElementById('txt').textContent = '🔴 Говорите...';
+  const txt = document.getElementById('txt');
+  const status = document.getElementById('autoStatus');
+  
+  txt.textContent = '🔴 Слушаю...';
+  status.textContent = '🎤 Распознавание речи...';
+  status.className = 'auto';
   
   r.onresult = async function(e) {
     const t = e.results[0][0].transcript;
-    document.getElementById('txt').textContent = '"' + t + '"';
+    txt.textContent = '"' + t + '"';
+    status.textContent = '✅ Распознано: "' + t + '"';
+    status.className = 'auto on';
     
     // Parse
     const m = t.toLowerCase().match(/(\d+[.,]?\d*)/);
-    const amt = m ? parseFloat(m[1].replace(',', '.')) : 0;
-    
+    const amt = m ? parseFloat(m[1].replace(',', '.')) : 0;    
     let cur = 'EUR';
     if (/лир/i.test(t)) cur = 'TRY';
     else if (/дол/i.test(t)) cur = 'USD';
@@ -96,9 +106,12 @@ function speak() {
     else if (/отель/i.test(t)) cat = 'hotel';
     
     document.getElementById('amt').value = amt;
-    document.getElementById('cur').value = cur;    document.getElementById('cat').value = cat;
+    document.getElementById('cur').value = cur;
+    document.getElementById('cat').value = cat;
     
-    // Location
+    status.textContent = '📍 Определение местоположения...';
+    
+    // Location and AUTO SAVE
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async function(p) {
         lat = p.coords.latitude;
@@ -110,21 +123,87 @@ function speak() {
         } catch(e) {
           document.getElementById('loc').value = lat.toFixed(2) + ', ' + lng.toFixed(2);
         }
-        setTimeout(save, 500);
-      });
+        
+        // AUTO SAVE after 1 second
+        status.textContent = '💾 Авто-сохранение...';
+        setTimeout(function() {
+          autoSave();
+        }, 1000);
+      }, function(err) {
+        console.warn('Geo error:', err);
+        document.getElementById('loc').value = 'Unknown';
+        status.textContent = '💾 Авто-сохранение (без GPS)...';
+        setTimeout(function() {
+          autoSave();
+        }, 1000);
+      }, { timeout: 5000 });
     } else {
-      setTimeout(save, 500);
+      document.getElementById('loc').value = 'Unknown';
+      status.textContent = '💾 Авто-сохранение...';
+      setTimeout(function() {
+        autoSave();
+      }, 1000);
     }
   };
+    r.onerror = function(e) {
+    txt.textContent = 'Ошибка: ' + e.error;
+    status.textContent = '❌ Ошибка распознавания';
+    status.className = 'auto';
+    setTimeout(function() { status.textContent = '🎤 Готов к голосовому вводу'; }, 2000);
+  };
   
-  r.onerror = function(e) {
-    document.getElementById('txt').textContent = 'Error: ' + e.error;
+  r.onend = function() {
+    setTimeout(function() {
+      txt.textContent = '';
+    }, 2000);
   };
   
   r.start();
 }
 
-// Save
+// Auto Save (called automatically after voice)
+function autoSave() {
+  const amt = parseFloat(document.getElementById('amt').value);
+  if (!amt || amt <= 0) {
+    show('❌ Не распознана сумма');
+    document.getElementById('autoStatus').textContent = '🎤 Готов к голосовому вводу';
+    document.getElementById('autoStatus').className = 'auto';
+    return;
+  }
+  
+  const rates = {EUR: 1, USD: 0.92, TRY: 0.029};
+  const cur = document.getElementById('cur').value;
+  const eur = amt * (rates[cur] || 1);
+  
+  data.unshift({
+    id: Date.now(),
+    amt: amt,
+    cur: cur,
+    cat: document.getElementById('cat').value,
+    eur: eur,
+    loc: document.getElementById('loc').value,
+    lat: lat,
+    lng: lng,
+    date: new Date().toISOString()
+  });
+  
+  localStorage.setItem('tc_data', JSON.stringify(data));
+  
+  document.getElementById('amt').value = '';
+  document.getElementById('loc').value = '';
+  
+  show('✅ АВТО-СОХРАНЕНО: ' + amt + ' ' + cur);
+  document.getElementById('autoStatus').textContent = '✅ Сохранено! Готов к следующему...';
+  document.getElementById('autoStatus').className = 'auto on';  
+  setTimeout(function() {
+    document.getElementById('autoStatus').textContent = '🎤 Готов к голосовому вводу';
+    document.getElementById('autoStatus').className = 'auto';
+  }, 3000);
+  
+  render();
+}
+
+// Manual Save (button)
 function save() {
   const amt = parseFloat(document.getElementById('amt').value);
   if (!amt || amt <= 0) {
@@ -145,13 +224,13 @@ function save() {
     loc: document.getElementById('loc').value,
     lat: lat,
     lng: lng,
-    date: new Date().toISOString()  });
+    date: new Date().toISOString()
+  });
   
   localStorage.setItem('tc_data', JSON.stringify(data));
   
   document.getElementById('amt').value = '';
   document.getElementById('loc').value = '';
-  document.getElementById('txt').textContent = '';
   
   show('✅ Сохранено!');
   render();
@@ -159,18 +238,18 @@ function save() {
 
 // Delete
 function del(id) {
-  if (!confirm('Delete?')) return;
+  if (!confirm('Удалить?')) return;
   data = data.filter(x => x.id !== id);
   localStorage.setItem('tc_data', JSON.stringify(data));
   render();
 }
-
 // Clear all
 function clr() {
-  if (!confirm('Clear ALL?')) return;
+  if (!confirm('Очистить ВСЁ?')) return;
   data = [];
   localStorage.removeItem('tc_data');
   render();
+  show('🗑️ Очищено');
 }
 
 // Load
@@ -192,14 +271,18 @@ function render() {
   let tot = 0;
   
   if (data.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:20px">Нет записей</div>';
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:20px">Нет записей<br><small>Нажми 🎤 ГОВОРИ</small></div>';
   } else {
-    data.forEach(function(x) {      tot += x.eur || 0;
+    data.forEach(function(x) {
+      tot += x.eur || 0;
+      
+      const cats = {food:'🍔',fuel:'⛽',hotel:'🏨'};
       
       const div = document.createElement('div');
       div.className = 'item';
       div.innerHTML = '<div style="display:flex;justify-content:space-between"><b>' + x.amt + ' ' + x.cur + '</b><span style="color:#94a3b8">€' + (x.eur||0).toFixed(2) + '</span></div>' +
         (x.loc ? '<div style="color:#94a3b8;font-size:0.9rem;margin:5px 0">📍 ' + x.loc + '</div>' : '') +
+        '<div style="font-size:0.8rem;color:#666;margin:3px 0">' + (cats[x.cat]||'📦') + '</div>' +
         '<button class="red" onclick="del(' + x.id + ')" style="padding:8px;margin-top:8px">🗑️ Удалить</button>';
       list.appendChild(div);
       
@@ -209,8 +292,7 @@ function render() {
         marks.push(m);
       }
     });
-  }
-  
+  }  
   document.getElementById('tot').textContent = '€' + tot.toFixed(2);
   
   if (marks.length > 0) {
@@ -227,7 +309,7 @@ function exp() {
   a.href = URL.createObjectURL(blob);
   a.download = 'travelcar.json';
   a.click();
-  show('Exported');
+  show('📤 Экспортировано');
 }
 
 // Toast
@@ -235,7 +317,7 @@ function show(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 2000);
+  setTimeout(function() { t.style.display = 'none'; }, 2500);
 }
 </script>
 

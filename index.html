@@ -1,317 +1,225 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TravelCar</title>
-<meta name="theme-color" content="#0f172a">
-<link rel="manifest" href="manifest.json">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:sans-serif;background:#0f172a;color:#fff;padding:15px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:15px;background:#1e293b;border-radius:12px}
-h1{font-size:1.3rem}
-.status{padding:5px 12px;border-radius:20px;background:rgba(34,197,94,0.2);border:1px solid #22c55e;font-size:0.85rem}
-.card{background:#1e293b;padding:20px;border-radius:12px;margin-bottom:15px}
-.voice-btn{width:100%;padding:25px;background:linear-gradient(135deg,#22c55e,#3b82f6);border:none;border-radius:50px;color:#fff;font-size:1.3rem;font-weight:bold;cursor:pointer;margin-bottom:15px}
-.voice-btn.recording{animation:pulse 1.5s infinite;background:linear-gradient(135deg,#ef4444,#dc2626)}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
-.form-group{margin-bottom:15px}
-label{display:block;margin-bottom:5px;color:#94a3b8;font-size:0.9rem}
-input,select{width:100%;padding:12px;border-radius:8px;border:2px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;font-size:1rem}
-.btn{width:100%;padding:14px;border:none;border-radius:10px;font-weight:bold;margin-bottom:10px;cursor:pointer}
-.btn-primary{background:#22c55e;color:#fff}
-.btn-secondary{background:#334155;color:#fff;border:1px solid rgba(255,255,255,0.1)}
-.expense-item{background:#0f172a;padding:15px;border-radius:8px;margin-bottom:10px;border-left:4px solid #22c55e}
-.expense-header{display:flex;justify-content:space-between;margin-bottom:8px}
-.amount{font-size:1.2rem;font-weight:bold;color:#22c55e}
-.delete-btn{background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;margin-top:10px}
-#map{height:250px;border-radius:8px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#334155;color:#fff;padding:12px 24px;border-radius:50px;transition:all 0.3s;opacity:0;z-index:9999}
-.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-.toast.success{background:#22c55e}
-.toast.error{background:#ef4444}
+body{margin:0;font-family:sans-serif;background:#0f172a;color:#fff;padding:20px}
+button{width:100%;padding:20px;margin:10px 0;border:none;border-radius:12px;font-size:1.1rem;cursor:pointer}
+.green{background:#22c55e;color:#fff}
+.blue{background:#3b82f6;color:#fff}
+input,select{width:100%;padding:15px;margin:10px 0;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#fff;font-size:1rem}
+.item{background:#1e293b;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e}
+#map{height:200px;border-radius:8px;margin-top:10px}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>🚗 TravelCar</h1>
-  <div id="status" class="status">🟢 Online</div>
-</header>
+<h1>🚗 TravelCar</h1>
 
-<div class="card">
-  <button id="voiceBtn" class="voice-btn" onclick="startVoice()">
-    🎤 Нажми и говори
-  </button>
-  <div id="voiceText" style="text-align:center;color:#94a3b8;margin-top:10px;"></div>
-</div>
+<button class="blue" onclick="speak()">🎤 ГОВОРИ</button>
+<div id="txt" style="text-align:center;color:#94a3b8;margin:10px 0;"></div>
 
-<div class="card">  <div class="form-group">
-    <label>💰 Сумма</label>
-    <input type="number" id="amount" placeholder="0.00" step="0.01">
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="form-group">
-      <label>Валюта</label>
-      <select id="currency">
-        <option value="EUR">€ EUR</option>
-        <option value="USD">$ USD</option>
-        <option value="TRY">₺ TRY</option>
-        <option value="GBP">£ GBP</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Категория</label>
-      <select id="category">
-        <option value="food">🍔 Еда</option>
-        <option value="fuel">⛽ Топливо</option>
-        <option value="hotel">🏨 Жильё</option>
-        <option value="other">📦 Прочее</option>
-      </select>
-    </div>
-  </div>
-  <div class="form-group">
-    <label>📍 Город</label>
-    <input type="text" id="city" placeholder="Авто..." readonly>
-  </div>
-  <button class="btn btn-primary" onclick="saveExpense()">💾 Сохранить</button>
-  <button class="btn btn-secondary" onclick="exportData()">📤 Экспорт</button>
-</div>
+<input type="number" id="amt" placeholder="Сумма" step="0.01">
+<select id="cur"><option value="EUR">€ EUR</option><option value="USD">$ USD</option><option value="TRY">₺ TRY</option></select>
+<select id="cat"><option value="food">🍔 Еда</option><option value="fuel">⛽ Топливо</option><option value="hotel">🏨 Отель</option></select>
+<input type="text" id="loc" placeholder="Город" readonly>
 
-<div class="card">
-  <h3>📊 Всего: <span id="total" style="color:#22c55e">€0.00</span></h3>
-  <div id="list" style="margin-top:15px"></div>
-</div>
+<button class="green" onclick="save()">💾 СОХРАНИТЬ</button>
 
-<div class="card">
-  <h3>🗺️ Карта</h3>
-  <div id="map"></div>
-</div>
+<div id="list"></div>
+<div id="total" style="font-size:1.5rem;text-align:center;margin:20px 0;">€0.00</div>
+<div id="map"></div>
 
-<div id="toast" class="toast"></div>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 <script>
-// 🔥 ЗАМЕНИ НА СВОЙ FIREBASE CONFIG
+// ⚠️ ЗАМЕНИ ЭТО НА СВОЙ FIREBASE CONFIG!
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project"
+  apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXX",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT"
 };
+
+// Проверка config
+if (firebaseConfig.apiKey.includes('XXXX') || !firebaseConfig.apiKey) {  alert('⚠️ НАСТРОЙ FIREBASE!\n1. Создай проект на console.firebase.google.com\n2. Включи Anonymous Auth\n3. Создай Firestore\n4. Скопируй config сюда');
+}
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
-
+let user = null;
 let expenses = [];
-let map, markers = [];
-let lat, lng;
-let currentUser = null;
+let map = L.map('map').setView([50, 10], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+let markers = [];
 
-// Voice Recognition
-function startVoice() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert('Используйте Chrome');
-    return;
-  }
+// Voice
+function speak() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Открой в Chrome'); return; }
   
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'ru-RU';
+  const r = new SR();
+  r.lang = 'ru-RU';
+  const txt = document.getElementById('txt');
   
-  const btn = document.getElementById('voiceBtn');
-  const text = document.getElementById('voiceText');
+  txt.textContent = '🔴 Говорите...';
   
-  btn.classList.add('recording');
-  btn.innerHTML = '🎙️ Слушаю...';
-  text.textContent = 'Говорите сейчас...';
-  
-  recognition.onresult = async (e) => {
-    const transcript = e.results[0][0].transcript;
-    text.textContent = `"${transcript}"`;
-    
-    // Parse
-    const parsed = parse(transcript);
-    document.getElementById('amount').value = parsed.amount;
-    document.getElementById('currency').value = parsed.currency;
-    document.getElementById('category').value = parsed.category;
-    
-    showToast(`✅ ${parsed.amount} ${parsed.currency}`, 'success');
-    
-    // Get location
-    await getLocation();
-        // Auto-save
-    setTimeout(saveExpense, 1000);
+  r.onresult = e => {
+    const t = e.results[0][0].transcript;
+    txt.textContent = '"' + t + '"';
+    parse(t);
   };
   
-  recognition.onerror = (e) => {
-    console.error(e.error);
-    text.textContent = 'Ошибка: ' + e.error;
-    btn.classList.remove('recording');
-    btn.innerHTML = '🎤 Нажми и говори';
+  r.onerror = e => {
+    txt.textContent = 'Ошибка: ' + e.error;
+    console.error(e);
   };
   
-  recognition.onend = () => {
-    btn.classList.remove('recording');
-    btn.innerHTML = '🎤 Нажми и говори';
-  };
-  
-  recognition.start();
+  r.start();
 }
 
+// Parse voice
 function parse(text) {
   const lower = text.toLowerCase();
   
-  // Amount
+  // Amount - replace comma with dot
   const m = lower.match(/(\d+[.,]?\d*)/);
-  const amount = m ? parseFloat(m[1].replace(',', '.')) : 0;
+  let amount = m ? parseFloat(m[1].replace(',', '.')) : 0;
   
   // Currency
-  let currency = 'EUR';
-  if (/лир/i.test(lower)) currency = 'TRY';
-  else if (/дол/i.test(lower)) currency = 'USD';
-  else if (/фун/i.test(lower)) currency = 'GBP';
+  let cur = 'EUR';
+  if (/лир/i.test(lower)) cur = 'TRY';
+  else if (/дол/i.test(lower)) cur = 'USD';
   
-  // Category
-  let category = 'other';
-  if (/еда|пицца|кофе|обед/i.test(lower)) category = 'food';
-  else if (/бензин|топливо|газ/i.test(lower)) category = 'fuel';
-  else if (/отель|гостиниц/i.test(lower)) category = 'hotel';
+  // Category  let cat = 'food';
+  if (/бензин|топливо/i.test(lower)) cat = 'fuel';
+  else if (/отель|гостиниц/i.test(lower)) cat = 'hotel';
   
-  return { amount, currency, category };
-}
-
-async function getLocation() {
-  return new Promise(resolve => {
-    navigator.geolocation.getCurrentPosition(async pos => {
-      lat = pos.coords.latitude;
-      lng = pos.coords.longitude;
-      
-      try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-        const d = await r.json();        const city = d.address?.city || d.address?.town || 'Unknown';
-        document.getElementById('city').value = city;
-      } catch(e) {
-        document.getElementById('city').value = `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
-      }
-      resolve();
-    }, () => resolve(), { timeout: 5000 });
+  document.getElementById('amt').value = amount;
+  document.getElementById('cur').value = cur;
+  document.getElementById('cat').value = cat;
+  
+  // Auto get location
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const {latitude: lat, longitude: lng} = pos.coords;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+      const d = await r.json();
+      document.getElementById('loc').value = d.address?.city || d.address?.town || 'Unknown';
+      window._lat = lat;
+      window._lng = lng;
+    } catch(e) {
+      document.getElementById('loc').value = 'No location';
+    }
   });
 }
 
-async function saveExpense() {
-  const amount = parseFloat(document.getElementById('amount').value);
-  const currency = document.getElementById('currency').value;
-  const category = document.getElementById('category').value;
-  const city = document.getElementById('city').value;
+// Save
+async function save() {
+  const amount = parseFloat(document.getElementById('amt').value);
+  const currency = document.getElementById('cur').value;
+  const category = document.getElementById('cat').value;
+  const city = document.getElementById('loc').value;
   
-  if (!amount || !currentUser) {
-    showToast('Ошибка', 'error');
+  if (!amount || amount <= 0) {
+    alert('Введите сумму!');
     return;
   }
   
-  // Convert to EUR (simplified)
-  const rates = { EUR: 1, USD: 0.92, TRY: 0.029, GBP: 1.17 };
+  if (!user) {
+    alert('Нет авторизации!');
+    return;
+  }
+  
+  // Simple EUR conversion
+  const rates = {EUR: 1, USD: 0.92, TRY: 0.029};
   const eur = amount * (rates[currency] || 1);
   
-  await db.collection('expenses').add({
-    amount, currency, category, eur, city,
-    lat: lat || null, lng: lng || null,
-    date: firebase.firestore.FieldValue.serverTimestamp(),
-    userId: currentUser.uid
-  });
-  
-  document.getElementById('amount').value = '';
-  document.getElementById('city').value = '';
-  showToast('✅ Сохранено!', 'success');
+  try {
+    await db.collection('expenses').add({
+      amount, currency, category, eur, city,
+      lat: window._lat || null,
+      lng: window._lng || null,
+      date: new Date(),      userId: user.uid
+    });
+    
+    document.getElementById('amt').value = '';
+    document.getElementById('loc').value = '';
+    document.getElementById('txt').textContent = '✅ Сохранено!';
+    setTimeout(() => document.getElementById('txt').textContent = '', 2000);
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+    console.error(e);
+  }
 }
 
-async function deleteExpense(id) {
-  await db.collection('expenses').doc(id).delete();
-}
+// Auth
+firebase.auth().onAuthStateChanged(u => {
+  if (u) {
+    user = u;
+    console.log('Auth:', u.uid);
+    
+    db.collection('expenses')
+      .where('userId', '==', u.uid)
+      .orderBy('date', 'desc')
+      .onSnapshot(snap => {
+        expenses = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        render();
+      });
+  } else {
+    firebase.auth().signInAnonymously();
+  }
+});
 
+// Render
 function render() {
   const list = document.getElementById('list');
   list.innerHTML = '';
-  
-  let total = 0;
   markers.forEach(m => map.removeLayer(m));
   markers = [];
   
-  expenses.forEach(e => {    total += e.eur || 0;
+  let total = 0;
+  
+  expenses.forEach(e => {
+    total += e.eur || 0;
     
     const div = document.createElement('div');
-    div.className = 'expense-item';
+    div.className = 'item';
     div.innerHTML = `
-      <div class="expense-header">
-        <span class="amount">${e.amount} ${e.currency} (€${(e.eur||0).toFixed(2)})</span>
-        <span>${getCatIcon(e.category)}</span>
-      </div>
-      ${e.city ? `<div>📍 ${e.city}</div>` : ''}
-      <button class="delete-btn" onclick="deleteExpense('${e.id}')">Удалить</button>
+      <div style="display:flex;justify-content:space-between">
+        <b>${e.amount} ${e.currency}</b>
+        <span>€${(e.eur||0).toFixed(2)}</span>
+      </div>      <div style="color:#94a3b8;margin:5px 0">${e.city || ''}</div>
+      <button onclick="del('${e.id}')" style="background:#ef4444;color:#fff;padding:8px;margin:5px 0">Удалить</button>
     `;
     list.appendChild(div);
     
     if (e.lat && e.lng) {
       const m = L.marker([e.lat, e.lng]).addTo(map);
-      m.bindPopup(`${e.amount} ${e.currency}<br>${e.city || ''}`);
+      m.bindPopup(`${e.amount} ${e.currency}<br>${e.city||''}`);
       markers.push(m);
     }
   });
   
-  document.getElementById('total').textContent = `€${total.toFixed(2)}`;
+  document.getElementById('total').textContent = '€' + total.toFixed(2);
   
   if (markers.length > 0) {
-    const group = new L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.1));
+    const g = new L.featureGroup(markers);
+    map.fitBounds(g.getBounds().pad(0.1));
   }
 }
 
-function getCatIcon(cat) {
-  const icons = { food: '🍔', fuel: '⛽', hotel: '🏨', other: '📦' };
-  return icons[cat] || '📦';
-}
-
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function exportData() {
-  const blob = new Blob([JSON.stringify(expenses, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'travelcar.json';
-  a.click();
-}
-
-// Authauth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    db.collection('expenses').where('userId', '==', user.uid)
-      .orderBy('date', 'desc')
-      .onSnapshot(snap => {
-        expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        render();
-      });
-  } else {
-    auth.signInAnonymously();
+// Delete
+async function del(id) {
+  if (confirm('Удалить?')) {
+    await db.collection('expenses').doc(id).delete();
   }
-});
-
-// Init
-window.onload = () => {
-  map = L.map('map').setView([50, 10], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-};
+}
 </script>
-
 </body>
 </html>

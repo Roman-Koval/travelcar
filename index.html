@@ -2,181 +2,26 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>🚗 TravelCar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1e88e5" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TravelCar</title>
 
-  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-title">
-      <span class="logo">🚗</span>
-      <div>
-        <h1>TravelCar</h1>
-        <p>Учёт расходов в поездках</p>
-      </div>
-    </div>
-    <button id="themeToggle" class="icon-button" title="Переключить тему">🌓</button>
-  </header>
 
-  <main class="app-main">
-    <!-- Поездки -->
-    <section class="card">
-      <h2>Поездки</h2>
-      <div class="trip-row">
-        <select id="tripSelect"></select>
-        <button id="newTripBtn" class="primary">+ Новая поездка</button>
-      </div>
+  <h1>🚗 TravelCar</h1>
 
-      <div id="tripMeta" class="trip-meta">
-        <div>
-          <label>Название:</label>
-          <span id="tripNameLabel">—</span>
-        </div>
-        <div>
-          <label>Даты:</label>
-          <span id="tripDatesLabel">—</span>
-        </div>
-        <div>
-          <label>Место:</label>
-          <span id="tripLocationLabel">—</span>
-        </div>
-        <div>
-          <label>Бюджет:</label>
-          <span id="tripBudgetLabel">—</span>
-        </div>
-      </div>
-    </section>
+  <button id="voiceBtn">🎤 Записать расход</button>
 
-    <!-- Добавление расхода -->
-    <section class="card">
-      <h2>Добавить расход</h2>
-      <form id="expenseForm" autocomplete="off">
-        <div class="grid-2">
-          <div class="field">
-            <label for="expenseAmount">Сумма</label>
-            <input id="expenseAmount" type="number" min="0" step="0.01" required />
-          </div>
-          <div class="field">
-            <label for="expenseCurrency">Валюта</label>
-            <select id="expenseCurrency">
-              <option value="RUB">RUB</option>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
-        </div>
+  <ul id="list"></ul>
 
-        <div class="grid-2">
-          <div class="field">
-            <label for="expenseCategory">Категория</label>
-            <select id="expenseCategory">
-              <option value="fuel">⛽ Топливо</option>
-              <option value="food">🍽️ Еда</option>
-              <option value="accommodation">🏠 Жильё</option>
-              <option value="toll">🛣️ Платные дороги</option>
-              <option value="repair">🛠️ Ремонт</option>
-              <option value="fun">🎭 Развлечения</option>
-              <option value="other">📦 Другое</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="expenseDate">Дата</label>
-            <input id="expenseDate" type="date" required />
-          </div>
-        </div>
+  <div id="map"></div>
 
-        <div class="field">
-          <label for="expenseNote">Комментарий</label>
-          <input id="expenseNote" type="text" placeholder="Например: заправка, кафе, отель..." />
-        </div>
-
-        <div class="field">
-          <label for="expenseLocation">Место (опционально)</label>
-          <input id="expenseLocation" type="text" placeholder="Город, адрес или координаты" />
-        </div>
-
-        <button type="submit" class="primary full-width">💾 Сохранить расход</button>
-      </form>
-    </section>
-
-    <!-- Список расходов -->
-    <section class="card">
-      <h2>Расходы</h2>
-
-      <div class="filters">
-        <div class="field">
-          <label for="filterCategory">Категория</label>
-          <select id="filterCategory">
-            <option value="all">Все</option>
-            <option value="fuel">⛽ Топливо</option>
-            <option value="food">🍽️ Еда</option>
-            <option value="accommodation">🏠 Жильё</option>
-            <option value="toll">🛣️ Платные дороги</option>
-            <option value="repair">🛠️ Ремонт</option>
-            <option value="fun">🎭 Развлечения</option>
-            <option value="other">📦 Другое</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="filterSort">Сортировка</label>
-          <select id="filterSort">
-            <option value="date_desc">Новые сначала</option>
-            <option value="date_asc">Старые сначала</option>
-            <option value="amount_desc">Дорогие сначала</option>
-            <option value="amount_asc">Дешёвые сначала</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="expensesEmpty" class="empty-state">Пока нет расходов</div>
-      <ul id="expensesList" class="expenses-list"></ul>
-    </section>
-
-    <!-- Аналитика -->
-    <section class="card">
-      <h2>Аналитика</h2>
-      <div class="analytics-grid">
-        <div class="stat">
-          <span class="stat-label">Всего</span>
-          <span id="statTotal" class="stat-value">0</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">В день</span>
-          <span id="statPerDay" class="stat-value">0</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Кол-во расходов</span>
-          <span id="statCount" class="stat-value">0</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Топ категория</span>
-          <span id="statTopCategory" class="stat-value">—</span>
-        </div>
-      </div>
-      <p class="hint">Все суммы считаются в валюте поездки.</p>
-    </section>
-
-    <!-- Экспорт / импорт -->
-    <section class="card">
-      <h2>Экспорт и импорт</h2>
-      <div class="export-row">
-        <button id="exportJsonBtn" class="secondary">📋 Экспорт JSON</button>
-        <button id="importJsonBtn" class="secondary">📥 Импорт JSON</button>
-        <input id="importFileInput" type="file" accept="application/json" hidden />
-      </div>
-      <textarea id="exportArea" class="export-area" readonly placeholder="Здесь появятся данные для экспорта"></textarea>
-    </section>
-  </main>
-
-  <footer class="app-footer">
-    <span>TravelCar • Локальное хранение • Работает офлайн</span>
-    <span id="versionLabel"></span>
-  </footer>
-
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>

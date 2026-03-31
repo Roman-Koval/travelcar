@@ -1,27 +1,21 @@
 {
-  "name": "TravelCar — Учёт расходов в поездках",
+  "name": "TravelCar — учёт расходов в поездках",
   "short_name": "TravelCar",
-  "description": "Приложение для учёта расходов в автопутешествиях с голосовым вводом и синхронизацией",
-  "start_url": "/travelcar/",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#f5f7fa",
-  "theme_color": "#4a90e2",
-  "orientation": "portrait-primary",
+  "background_color": "#121212",
+  "theme_color": "#1e88e5",
+  "lang": "ru",
   "icons": [
     {
-      "src": "travelcar-icon-192.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "travelcar-icon-512.png",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
-  ],
-  "categories": ["travel", "finance", "utilities"],
-  "lang": "ru",
-  "dir": "ltr"
+  ]
 }

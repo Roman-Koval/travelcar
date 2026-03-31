@@ -1,6 +1,5 @@
 // ===== Константы и состояние =====
 const STORAGE_KEY = "travelcar_state_v1";
-
 const DEFAULT_CURRENCY = "RUB";
 
 const CATEGORY_LABELS = {
@@ -287,7 +286,12 @@ function renderAnalytics() {
   statTotal.textContent = formatAmount(total, trip.currency);
 
   const start = parseDate(trip.startDate);
-  const end = parseDate(trip.endDate) || (trip.expenses.length ? parseDate(trip.expenses[trip.expenses.length - 1].date) : null);
+  const lastExpenseDate = trip.expenses
+    .map((e) => parseDate(e.date))
+    .filter(Boolean)
+    .sort((a, b) => a - b)
+    .pop();
+  const end = parseDate(trip.endDate) || lastExpenseDate || start;
   const days = daysBetween(start, end);
   const perDay = days > 0 ? total / days : total;
   statPerDay.textContent = formatAmount(perDay, trip.currency);
@@ -446,11 +450,9 @@ function init() {
   loadVersion();
   registerServiceWorker();
 
-  // Установить сегодняшнюю дату по умолчанию
   const today = new Date().toISOString().slice(0, 10);
   expenseDate.value = today;
 
-  // Слушатели
   newTripBtn.addEventListener("click", createTrip);
 
   tripSelect.addEventListener("change", () => {

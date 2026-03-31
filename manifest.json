@@ -1,7 +1,7 @@
 {
   "name": "TravelCar — Учёт расходов в поездках",
   "short_name": "TravelCar",
-  "description": "Приложение для учёта расходов в автопутешествиях с картами, аналитикой и офлайн-режимом",
+  "description": "Приложение для учёта расходов в автопутешествиях с голосовым вводом и синхронизацией",
   "start_url": "/travelcar/",
   "display": "standalone",
   "background_color": "#f5f7fa",

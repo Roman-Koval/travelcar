@@ -2,17 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TravelCar CLOUD</title>
-<meta name="description" content="Учет расходов в путешествиях с голосовым вводом">
 <meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="travelcar-icon-192.png">
-<link rel="apple-touch-icon" href="travelcar-icon-192.png">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -28,26 +21,42 @@
 </header>
 
 <main>
+  <!-- DIAGNOSTIC PANEL -->
+  <div class="card" style="background: #1e3a5f; border: 2px solid #f59e0b;">
+    <h3 style="color: #f59e0b;">🔧 Диагностика</h3>
+    <div id="diagnostic" style="font-size: 0.85rem; line-height: 1.8;">
+      Проверка...
+    </div>
+    <button onclick="runDiagnostic()" style="margin-top: 10px; background: #f59e0b; color: #000;">🔄 Проверить ещё раз</button>
+  </div>
+
   <div class="card voice-card">
     <button id="voiceBtn" onclick="startVoice()" class="voice-btn">
-      <span class="btn-icon">🎤</span>
-      <span class="btn-text">Голосовой ввод</span>
+      <span>🎤</span>
+      <span>Голосовой ввод</span>
     </button>
-    <div id="voiceStatus" class="voice-status"></div>
+    <div id="voiceStatus" style="margin-top: 10px; color: #94a3b8;"></div>
+    
+    <!-- MANUAL TEST -->
+    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+      <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">📝 Или введите вручную:</label>
+      <input type="text" id="manualText" placeholder="Например: пицца 30 евро" style="margin-bottom: 10px;">
+      <button onclick="parseManual()" style="background: #3b82f6; width: 100%;">Распознать текст</button>
+    </div>
   </div>
 
   <div class="card">
     <div class="form-group">
-      <label for="amount">💰 Сумма</label>
-      <input type="number" id="amount" placeholder="0.00" step="0.01" inputmode="decimal">
+      <label>💰 Сумма</label>      <input type="number" id="amount" placeholder="0.00" step="0.01">
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label for="currency">Валюта</label>
+        <label>Валюта</label>
         <select id="currency">
           <option value="EUR">€ EUR</option>
-          <option value="TRY">₺ TRY</option>          <option value="USD">$ USD</option>
+          <option value="TRY">₺ TRY</option>
+          <option value="USD">$ USD</option>
           <option value="GBP">£ GBP</option>
           <option value="CHF">₣ CHF</option>
           <option value="CZK">Kč CZK</option>
@@ -56,7 +65,7 @@
       </div>
 
       <div class="form-group">
-        <label for="category">Категория</label>
+        <label>Категория</label>
         <select id="category">
           <option value="food">🍔 Еда</option>
           <option value="fuel">⛽ Топливо</option>
@@ -70,72 +79,524 @@
     </div>
 
     <div class="form-group">
-      <label for="comment">📝 Комментарий</label>
-      <input type="text" id="comment" placeholder="Описание расхода...">
+      <label>📝 Комментарий</label>
+      <input type="text" id="comment" placeholder="Описание...">
     </div>
 
     <div class="form-group">
-      <label for="location">📍 Местоположение</label>
-      <input type="text" id="location" placeholder="Определяется автоматически..." readonly>
+      <label>📍 Местоположение</label>
+      <input type="text" id="location" placeholder="Автоматически..." readonly>
       <button onclick="getGeo()" class="small-btn">🔄 Обновить</button>
     </div>
 
     <div class="button-group">
-      <button onclick="addExpense()" class="btn-primary">💾 Сохранить расход</button>
+      <button onclick="addExpense()" class="btn-primary">💾 Сохранить</button>
       <button onclick="exportData()" class="btn-secondary">📤 Экспорт JSON</button>
-      <button onclick="exportCSV()" class="btn-secondary">📊 Экспорт CSV</button>
     </div>
   </div>
 
   <div class="card stats-card">
-    <h3>📊 Статистика</h3>
-    <div id="stats">
+    <h3>📊 Статистика</h3>    <div id="stats">
       <div class="stat-item">
-        <span class="stat-label">Общая сумма:</span>
-        <span class="stat-value" id="totalEUR">€0.00</span>
+        <span>Общая сумма:</span>
+        <span id="totalEUR" style="color: #22c55e; font-weight: bold;">€0.00</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Записей:</span>
-        <span class="stat-value" id="totalCount">0</span>      </div>
+        <span>Записей:</span>
+        <span id="totalCount" style="color: #22c55e; font-weight: bold;">0</span>
+      </div>
       <div id="categoryStats"></div>
     </div>
   </div>
 
   <div class="card">
-    <h3>📋 История расходов</h3>
-    <div id="filters" class="filters">
-      <select id="filterCategory" onchange="renderExpenses()">
-        <option value="all">Все категории</option>
-        <option value="food">🍔 Еда</option>
-        <option value="fuel">⛽ Топливо</option>
-        <option value="hotel">🏨 Жильё</option>
-        <option value="transport">🚇 Транспорт</option>
-        <option value="shopping">🛍️ Покупки</option>
-        <option value="entertainment">🎭 Развлечения</option>
-        <option value="other">📦 Прочее</option>
-      </select>
-    </div>
+    <h3>📋 История</h3>
     <div id="list" class="expense-list"></div>
   </div>
 
-  <div class="card map-card">
-    <h3>🗺️ Карта маршрута</h3>
-    <div id="map"></div>
+  <div class="card">
+    <h3>🗺️ Карта</h3>
+    <div id="map" style="height: 300px; border-radius: 8px;"></div>
   </div>
 </main>
 
 <footer>
-  <p>TravelCar CLOUD v1.0 • <span id="lastSync">Синхронизация...</span></p>
+  <p>TravelCar v1.0 • <span id="lastSync">...</span></p>
 </footer>
 
 <div id="toast" class="toast"></div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="app.js"></script>
 
-</body>
-</html>
+<script>
+// ========== FIREBASE CONFIG - ЗАМЕНИ НА СВОИ ==========
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
+// =====================================================
+
+// Initialize Firebaseif (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Globals
+let expenses = [];
+let map = null;
+let markersCluster = null;
+let routeLine = null;
+let currentUser = null;
+let recognition = null;
+let ratesCache = { timestamp: 0,  null };
+const geoCache = new Map();
+
+const categories = {
+  food: { icon: '🍔', label: 'Еда' },
+  fuel: { icon: '⛽', label: 'Топливо' },
+  hotel: { icon: '🏨', label: 'Жильё' },
+  transport: { icon: '🚇', label: 'Транспорт' },
+  shopping: { icon: '🛍️', label: 'Покупки' },
+  entertainment: { icon: '🎭', label: 'Развлечения' },
+  other: { icon: '📦', label: 'Прочее' }
+};
+
+const currencySymbols = {
+  EUR: '€', USD: '$', TRY: '₺', GBP: '£', 
+  CHF: '₣', CZK: 'Kč', PLN: 'zł', RUB: '₽'
+};
+
+// ========== DIAGNOSTIC ==========
+function runDiagnostic() {
+  const diag = document.getElementById('diagnostic');
+  let html = '';
+  
+  // Check HTTPS
+  const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+  html += `<div>${isHTTPS ? '✅' : '❌'} HTTPS: ${isHTTPS ? 'Да' : 'Нет (нужен для микрофона)'}</div>`;
+  
+  // Check Speech Recognition
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  html += `<div>${SpeechRecognition ? '✅' : '❌'} Speech Recognition API: ${SpeechRecognition ? 'Доступен' : 'Не поддерживается'}</div>`;
+  
+  if (SpeechRecognition) {
+    const r = new SpeechRecognition();
+    html += `<div>🎤 Язык: ru-RU</div>`;
+    html += `<div>🎤 Continuous: ${r.continuous}</div>`;
+  }
+    // Check microphone permission
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'microphone' }).then(result => {
+      html += `<div>🎙️ Микрофон: ${result.state}</div>`;
+      diag.innerHTML = html;
+    }).catch(() => {
+      html += `<div>🎙️ Микрофон: неизвестно</div>`;
+      diag.innerHTML = html;
+    });
+  } else {
+    html += `<div>🎙️ Проверка прав: не поддерживается</div>`;
+    diag.innerHTML = html;
+  }
+  
+  // Check Firebase
+  html += `<div>${firebase.apps.length > 0 ? '✅' : '❌'} Firebase: ${firebase.apps.length > 0 ? 'Инициализирован' : 'Не инициализирован'}</div>`;
+  
+  diag.innerHTML = html;
+}
+
+// ========== VOICE RECOGNITION ==========
+function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  if (!SpeechRecognition) {
+    showToast('❌ Браузер не поддерживает голосовой ввод. Используйте Chrome.', 'error');
+    return null;
+  }
+  
+  const r = new SpeechRecognition();
+  r.lang = 'ru-RU';
+  r.interimResults = false;
+  r.maxAlternatives = 1;
+  r.continuous = false;
+  
+  r.onstart = () => {
+    console.log('🎤 Recording started');
+    const btn = document.getElementById('voiceBtn');
+    const status = document.getElementById('voiceStatus');
+    if (btn) {
+      btn.classList.add('recording');
+      btn.innerHTML = '<span>🎙️</span><span>Запись...</span>';
+    }
+    if (status) status.textContent = '🔴 Говорите сейчас...';
+  };
+  
+  r.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    console.log('✅ Recognized:', transcript);
+        const status = document.getElementById('voiceStatus');
+    if (status) status.textContent = `Распознано: "${transcript}"`;
+    
+    // Parse
+    const parsed = parseVoiceInput(transcript);
+    console.log('Parsed:', parsed);
+    
+    // Fill fields
+    const amountInput = document.getElementById('amount');
+    const currencySelect = document.getElementById('currency');
+    const categorySelect = document.getElementById('category');
+    const commentInput = document.getElementById('comment');
+    
+    if (amountInput && parsed.amount) amountInput.value = parsed.amount;
+    if (currencySelect) currencySelect.value = parsed.currency;
+    if (categorySelect) categorySelect.value = parsed.category;
+    if (commentInput) commentInput.value = transcript;
+    
+    showToast(`✅ ${parsed.amount} ${parsed.currency} - ${categories[parsed.category].label}`, 'success');
+    
+    // Get location
+    await getGeo();
+    
+    // Auto-save
+    setTimeout(() => addExpense(), 1500);
+  };
+  
+  r.onerror = (event) => {
+    console.error('❌ Voice error:', event.error);
+    const status = document.getElementById('voiceStatus');
+    let msg = 'Ошибка';
+    
+    switch(event.error) {
+      case 'no-speech': msg = '🔇 Не слышно речи'; break;
+      case 'audio-capture': msg = '🎤 Нет микрофона'; break;
+      case 'not-allowed': msg = '⛔ Нет разрешения на микрофон'; break;
+      case 'network': msg = '🌐 Ошибка сети'; break;
+      default: msg = `❌ ${event.error}`;
+    }
+    
+    if (status) status.textContent = msg;
+    showToast(msg, 'error');
+    
+    resetVoiceButton();
+  };
+  
+  r.onend = () => {
+    console.log('🎤 Recording ended');
+    resetVoiceButton();
+  };  
+  return r;
+}
+
+function resetVoiceButton() {
+  const btn = document.getElementById('voiceBtn');
+  const status = document.getElementById('voiceStatus');
+  if (btn) {
+    btn.classList.remove('recording');
+    btn.innerHTML = '<span>🎤</span><span>Голосовой ввод</span>';
+  }
+  setTimeout(() => {
+    if (status) status.textContent = '';
+  }, 2000);
+}
+
+function startVoice() {
+  // Run diagnostic first
+  runDiagnostic();
+  
+  if (!recognition) {
+    recognition = initSpeechRecognition();
+    if (!recognition) return;
+  }
+  
+  try {
+    recognition.start();
+  } catch (e) {
+    console.error('Start error:', e);
+    // Try to reinitialize
+    recognition = initSpeechRecognition();
+    if (recognition) {
+      try {
+        recognition.start();
+      } catch (e2) {
+        showToast('Ошибка запуска: ' + e2.message, 'error');
+      }
+    }
+  }
+}
+
+// Manual parse (for testing)
+function parseManual() {
+  const input = document.getElementById('manualText');
+  const text = input.value.trim();
+  
+  if (!text) {
+    showToast('Введите текст', 'error');
+    return;
+  }  
+  const parsed = parseVoiceInput(text);
+  
+  const amountInput = document.getElementById('amount');
+  const currencySelect = document.getElementById('currency');
+  const categorySelect = document.getElementById('category');
+  const commentInput = document.getElementById('comment');
+  
+  if (amountInput) amountInput.value = parsed.amount || '';
+  if (currencySelect) currencySelect.value = parsed.currency;
+  if (categorySelect) categorySelect.value = parsed.category;
+  if (commentInput) commentInput.value = text;
+  
+  showToast(`Распознано: ${parsed.amount} ${parsed.currency}`, 'success');
+  getGeo();
+}
+
+function parseVoiceInput(text) {
+  const lower = text.toLowerCase();
+  
+  // Amount
+  const amountMatch = lower.match(/(\d+[.,]?\d*)/);
+  let amount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+  
+  // Currency
+  let currency = 'EUR';
+  if (/лир|try/i.test(lower)) currency = 'TRY';
+  else if (/доллар|дол|usd|\$/i.test(lower)) currency = 'USD';
+  else if (/фунт|gbp|£/i.test(lower)) currency = 'GBP';
+  else if (/франк|chf/i.test(lower)) currency = 'CHF';
+  else if (/злот|pln/i.test(lower)) currency = 'PLN';
+  else if (/крон|czk/i.test(lower)) currency = 'CZK';
+  else if (/рубль|rub|руб/i.test(lower)) currency = 'RUB';
+  
+  // Category
+  let category = 'other';
+  if (/еда|обед|ужин|завтрак|кофе|ресторан|кафе|пицца|бургер|food|eat|pizza/i.test(lower)) {
+    category = 'food';
+  } else if (/бензин|топливо|заправ|газ|fuel|petrol|gas/i.test(lower)) {
+    category = 'fuel';
+  } else if (/отель|гостиниц|жильё|ночлег|hotel|stay/i.test(lower)) {
+    category = 'hotel';
+  } else if (/транспорт|метро|автобус|такси|transport|taxi|metro/i.test(lower)) {
+    category = 'transport';
+  } else if (/покупк|шопинг|магазин|shopping|buy/i.test(lower)) {
+    category = 'shopping';
+  } else if (/развлеч|кино|театр|билет|entertainment|ticket/i.test(lower)) {
+    category = 'entertainment';
+  }
+    return { amount, currency, category };
+}
+
+// ========== GEOLOCATION ==========
+async function getGeo() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      const loc = document.getElementById('location');
+      if (loc) loc.value = 'Не поддерживается';
+      resolve();
+      return;
+    }
+    
+    const locInput = document.getElementById('location');
+    if (locInput) locInput.value = '📍 Определение...';
+    
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+        
+        if (geoCache.has(key)) {
+          window._lat = lat;
+          window._lng = lng;
+          const loc = document.getElementById('location');
+          if (loc) loc.value = geoCache.get(key);
+          resolve();
+          return;
+        }
+        
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=ru`
+          );
+          const data = await res.json();
+          const city = data.address?.city || data.address?.town || data.address?.village || 'Unknown';
+          
+          geoCache.set(key, city);
+          window._lat = lat;
+          window._lng = lng;
+          
+          const loc = document.getElementById('location');
+          if (loc) loc.value = city;
+          
+          await new Promise(r => setTimeout(r, 1100));
+          resolve();
+        } catch (e) {
+          window._lat = lat;
+          window._lng = lng;
+          const loc = document.getElementById('location');          if (loc) loc.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          resolve();
+        }
+      },
+      (err) => {
+        console.warn('Geo error:', err);
+        const loc = document.getElementById('location');
+        if (loc) loc.value = 'Не определено';
+        resolve();
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+// ========== CURRENCY ==========
+async function convertToEUR(amount, currency) {
+  if (!amount || currency === 'EUR') return amount || 0;
+  
+  const now = Date.now();
+  if (ratesCache.data && (now - ratesCache.timestamp) < 3600000) {
+    const rate = ratesCache.data[currency];
+    return rate ? amount / rate : amount;
+  }
+  
+  try {
+    const res = await fetch('https://api.frankfurter.dev/latest');
+    const data = await res.json();
+    ratesCache = { timestamp: now,  data.rates };
+    const rate = data.rates[currency];
+    return rate ? amount / rate : amount;
+  } catch (e) {
+    return amount;
+  }
+}
+
+// ========== ADD EXPENSE ==========
+async function addExpense() {
+  const amountInput = document.getElementById('amount');
+  const amount = parseFloat(amountInput?.value);
+  const currency = document.getElementById('currency')?.value || 'EUR';
+  const category = document.getElementById('category')?.value || 'other';
+  const comment = document.getElementById('comment')?.value.trim() || '';
+  const city = document.getElementById('location')?.value || '';
+  
+  if (!amount || amount <= 0) {
+    showToast('❌ Введите сумму', 'error');
+    return;
+  }
+    if (!currentUser) {
+    showToast('⏳ Ожидание авторизации...', 'error');
+    setTimeout(addExpense, 2000);
+    return;
+  }
+  
+  showToast('💾 Сохранение...', 'success');
+  
+  try {
+    const eur = await convertToEUR(amount, currency);
+    
+    await db.collection('expenses').add({
+      amount,
+      currency,
+      category,
+      eur,
+      comment,
+      city,
+      lat: window._lat || null,
+      lng: window._lng || null,
+      date: firebase.firestore.FieldValue.serverTimestamp(),
+      userId: currentUser.uid,
+      createdAt: new Date().toISOString()
+    });
+    
+    if (amountInput) amountInput.value = '';
+    const commentInput = document.getElementById('comment');
+    if (commentInput) commentInput.value = '';
+    const manualInput = document.getElementById('manualText');
+    if (manualInput) manualInput.value = '';
+    
+    showToast('✅ Сохранено!', 'success');
+  } catch (e) {
+    console.error('Save error:', e);
+    showToast('Ошибка: ' + e.message, 'error');
+  }
+}
+
+// ========== DELETE ==========
+async function deleteExpense(id) {
+  if (!confirm('Удалить?')) return;
+  try {
+    await db.collection('expenses').doc(id).delete();
+    showToast('Удалено', 'success');
+  } catch (e) {
+    showToast('Ошибка', 'error');
+  }
+}
+
+// ========== RENDER ==========function renderExpenses() {
+  const list = document.getElementById('list');
+  if (!list) return;
+  
+  const filterCat = document.getElementById('filterCategory')?.value || 'all';
+  list.innerHTML = '';
+  
+  let total = 0;
+  const catTotals = {};
+  Object.keys(categories).forEach(c => catTotals[c] = 0);
+  
+  const filtered = filterCat === 'all' ? expenses : expenses.filter(e => e.category === filterCat);
+  
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#666;">📭 Нет записей</div>';
+  }
+  
+  filtered.forEach(exp => {
+    total += exp.eur || 0;
+    catTotals[exp.category] = (catTotals[exp.category] || 0) + (exp.eur || 0);
+    
+    const div = document.createElement('div');
+    div.className = `expense-item category-${exp.category}`;
+    
+    const date = exp.date?.toDate ? exp.date.toDate() : new Date(exp.createdAt);
+    const dateStr = date.toLocaleString('ru-RU', { 
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+    });
+    
+    const cat = categories[exp.category] || categories.other;
+    const sym = currencySymbols[exp.currency] || '';
+    
+    div.innerHTML = `
+      <div class="expense-header">
+        <div>
+          <span class="expense-amount">${sym}${exp.amount} ${exp.currency}</span>
+          <span class="expense-eur">(€${(exp.eur || 0).toFixed(2)})</span>
+        </div>
+        <span class="expense-category">${cat.icon} ${cat.label}</span>
+      </div>
+      ${exp.comment ? `<div class="expense-details">📝 ${exp.comment}</div>` : ''}
+      ${exp.city ? `<div class="expense-details">📍 ${exp.city}</div>` : ''}
+      <div class="expense-date">🕐 ${dateStr}</div>
+      <button class="delete-btn" onclick="deleteExpense('${exp.id}')">🗑️</button>
+    `;
+    
+    list.appendChild(div);
+  });
+  
+  const totalEl = document.getElementById('totalEUR');  const countEl = document.getElementById('totalCount');
+  const catStatsEl = document.getElementById('categoryStats');
+  
+  if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
+  if (countEl) countEl.textContent = filtered.length;
+  
+  if (catStatsEl) {
+    catStatsEl.innerHTML = '';
+    Object.entries(catTotals).forEach(([cat, tot]) => {
+      if (tot > 0) {
+        const info = categories[cat];
+        const div = document.createElement('div');
+        div.className = 'stat-item';
+        div.innerHTML

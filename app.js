@@ -23,6 +23,18 @@ loadState();
 window.addEventListener("load", () => {
   document.getElementById("loader").style.display = "none";
 });
+async function requestPushPermission() {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return;
+
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (reg) {
+    reg.showNotification("TravelCar", {
+      body: "Push‑уведомления включены",
+      icon: "travelcar-icon-192.png"
+    });
+  }
+}
 
 // ===============================
 // 2. Тема (Dark / Light)

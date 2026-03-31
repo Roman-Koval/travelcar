@@ -2,225 +2,182 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>TravelCar — Учёт расходов в поездках</title>
-  <meta name="description" content="Приложение для учёта расходов в автопутешествиях с голосовым вводом" />
-  <meta name="theme-color" content="#4a90e2" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="TravelCar" />
-  
-  <!-- PWA -->
+  <title>🚗 TravelCar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1e88e5" />
+
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="travelcar-icon-192.png" />
-  <link rel="apple-touch-icon" href="travelcar-icon-192.png" />
-  
-  <!-- External Libraries -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
-  
-  <!-- Preconnect -->
-  <link rel="preconnect" href="https://unpkg.com" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
 </head>
 <body>
-  <!-- Online/Offline Indicator -->
-  <div id="onlineIndicator" class="online-indicator">🟢 Онлайн</div>
-
-  <!-- Header -->
-  <header class="header">
-    <h1>🚗 TravelCar</h1>
-    <div class="header-actions">
-      <button id="themeToggle" class="icon-btn" title="Сменить тему">🌓</button>
-      <button id="syncBtn" class="icon-btn" title="Синхронизация">🔄</button>
-      <button id="backupBtn" class="icon-btn" title="Бэкап">💾</button>
+  <header class="app-header">
+    <div class="app-title">
+      <span class="logo">🚗</span>
+      <div>
+        <h1>TravelCar</h1>
+        <p>Учёт расходов в поездках</p>
+      </div>
     </div>
+    <button id="themeToggle" class="icon-button" title="Переключить тему">🌓</button>
   </header>
 
-  <!-- Main Content -->
-  <main class="container">
-    
-    <!-- Trip Selector -->
-    <section class="trip-selector">
-      <select id="tripSelect">
-        <option value="">+ Новая поездка</option>
-      </select>
-      <button id="newTripBtn" class="btn btn-primary">➕ Поездка</button>
-    </section>
-    <!-- Active Trip Info -->
-    <section id="tripInfo" class="trip-info hidden">
-      <h2 id="tripTitle">Название поездки</h2>
-      <p id="tripDates">📅 Даты</p>
-      <p id="tripLocation">📍 Место</p>
-      <div class="budget-control">
-        <label>Бюджет: <input type="number" id="tripBudget" placeholder="0" step="0.01" /> <span id="tripCurrency">RUB</span></label>
-        <div id="budgetProgress" class="budget-progress">
-          <div class="budget-bar" id="budgetBar"></div>
+  <main class="app-main">
+    <!-- Блок выбора поездки -->
+    <section class="card">
+      <h2>Поездки</h2>
+      <div class="trip-row">
+        <select id="tripSelect"></select>
+        <button id="newTripBtn" class="primary">+ Новая поездка</button>
+      </div>
+
+      <div id="tripMeta" class="trip-meta">
+        <div>
+          <label>Название:</label>
+          <span id="tripNameLabel">—</span>
         </div>
-        <span id="budgetStatus" class="budget-status"></span>
+        <div>
+          <label>Даты:</label>
+          <span id="tripDatesLabel">—</span>
+        </div>
+        <div>
+          <label>Место:</label>
+          <span id="tripLocationLabel">—</span>
+        </div>
+        <div>
+          <label>Бюджет:</label>
+          <span id="tripBudgetLabel">—</span>
+        </div>
       </div>
     </section>
 
-    <!-- Map -->
-    <section id="mapSection" class="map-section hidden">
-      <div id="map" class="map"></div>
-      <button id="locateBtn" class="btn btn-sm">📍 Моё местоположение</button>
-    </section>
+    <!-- Форма добавления расхода -->
+    <section class="card">
+      <h2>Добавить расход</h2>
+      <form id="expenseForm" autocomplete="off">
+        <div class="grid-2">
+          <div class="field">
+            <label for="expenseAmount">Сумма</label>
+            <input id="expenseAmount" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="field">
+            <label for="expenseCurrency">Валюта</label>
+            <select id="expenseCurrency">
+              <option value="RUB">RUB</option>
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
 
-    <!-- Add Expense Form -->
-    <section id="expenseForm" class="expense-form hidden">
-      <h3>💰 Добавить расход</h3>
-      <form id="addExpenseForm">
-        <input type="text" id="expTitle" placeholder="Название (напр. Бензин)" required />
-        
-        <div class="row">
-          <input type="number" id="expAmount" placeholder="Сумма" step="0.01" required />
-          <select id="expCategory">
-            <option value="fuel">⛽ Топливо</option>
-            <option value="food">🍽️ Еда</option>
-            <option value="accommodation">🏨 Жильё</option>
-            <option value="tolls">🛣️ Платные дороги</option>
-            <option value="repairs">🔧 Ремонт</option>
-            <option value="entertainment">🎭 Развлечения</option>
-            <option value="other">📦 Другое</option>
-          </select>
+        <div class="grid-2">
+          <div class="field">
+            <label for="expenseCategory">Категория</label>
+            <select id="expenseCategory">
+              <option value="fuel">⛽ Топливо</option>
+              <option value="food">🍽️ Еда</option>
+              <option value="accommodation">🏠 Жильё</option>
+              <option value="toll">🛣️ Платные дороги</option>
+              <option value="repair">🛠️ Ремонт</option>
+              <option value="fun">🎭 Развлечения</option>
+              <option value="other">📦 Другое</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="expenseDate">Дата</label>
+            <input id="expenseDate" type="date" required />
+          </div>
         </div>
-        
-        <div class="row">
-          <input type="date" id="expDate" required />
-          <input type="time" id="expTime" required />
+
+        <div class="field">
+          <label for="expenseNote">Комментарий</label>
+          <input id="expenseNote" type="text" placeholder="Например: заправка, кафе, отель..." />
         </div>
-        
-        <input type="text" id="expLocation" placeholder="📍 Место (или используйте геолокацию)" />
-        <button type="button" id="geoBtn" class="btn btn-sm">📍 Определить координаты</button>
-        
-        <input type="file" id="expPhoto" accept="image/*" capture="environment" />
-        <div id="photoPreview" class="photo-preview"></div>
-                <div class="voice-input">
-          <button type="button" id="voiceBtn" class="btn btn-voice">🎤 Голосовой ввод</button>
-          <span id="voiceStatus"></span>
+
+        <div class="field">
+          <label for="expenseLocation">Место (опционально)</label>
+          <input id="expenseLocation" type="text" placeholder="Город, адрес или координаты" />
         </div>
-        
-        <button type="submit" class="btn btn-primary btn-block">💾 Сохранить расход</button>
+
+        <button type="submit" class="primary full-width">💾 Сохранить расход</button>
       </form>
     </section>
 
-    <!-- Filters -->
-    <section id="filters" class="filters hidden">
-      <input type="text" id="searchExpenses" placeholder="🔍 Поиск..." />
-      <select id="filterCategory">
-        <option value="">Все категории</option>
-        <option value="fuel">⛽ Топливо</option>
-        <option value="food">🍽️ Еда</option>
-        <option value="accommodation">🏨 Жильё</option>
-        <option value="tolls">🛣️ Платные дороги</option>
-        <option value="repairs">🔧 Ремонт</option>
-        <option value="entertainment">🎭 Развлечения</option>
-        <option value="other">📦 Другое</option>
-      </select>
-      <select id="sortBy">
-        <option value="date-desc">📅 Новые</option>
-        <option value="date-asc">📅 Старые</option>
-        <option value="amount-desc">💰 Дорогие</option>
-        <option value="amount-asc">💰 Дешёвые</option>
-      </select>
-    </section>
+    <!-- Фильтры и список расходов -->
+    <section class="card">
+      <h2>Расходы</h2>
 
-    <!-- Expenses List -->
-    <section id="expensesSection" class="expenses-section hidden">
-      <h3>📋 Расходы (<span id="expenseCount">0</span>)</h3>
-      <div id="expenseList" class="expense-list"></div>
-    </section>
-
-    <!-- Analytics -->
-    <section id="analytics" class="analytics hidden">
-      <h3>📊 Аналитика</h3>
-      <canvas id="categoryChart"></canvas>
-      <canvas id="dailyChart"></canvas>
-      
-      <!-- Stats Cards -->
-      <div class="trip-stats">
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-value" id="statTotal">0</div>
-          <div class="stat-label">Всего <span class="currency">RUB</span></div>
+      <div class="filters">
+        <div class="field">
+          <label for="filterCategory">Категория</label>
+          <select id="filterCategory">
+            <option value="all">Все</option>
+            <option value="fuel">⛽ Топливо</option>
+            <option value="food">🍽️ Еда</option>
+            <option value="accommodation">🏠 Жильё</option>
+            <option value="toll">🛣️ Платные дороги</option>
+            <option value="repair">🛠️ Ремонт</option>
+            <option value="fun">🎭 Развлечения</option>
+            <option value="other">📦 Другое</option>
+          </select>
         </div>
-        <div class="stat-card">          <div class="stat-icon">📊</div>
-          <div class="stat-value" id="statAvg">0</div>
-          <div class="stat-label">В день</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📝</div>
-          <div class="stat-value" id="statCount">0</div>
-          <div class="stat-label">Расходов</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">🏆</div>
-          <div class="stat-value" id="statTop">-</div>
-          <div class="stat-label">Топ категория</div>
+        <div class="field">
+          <label for="filterSort">Сортировка</label>
+          <select id="filterSort">
+            <option value="date_desc">Новые сначала</option>
+            <option value="date_asc">Старые сначала</option>
+            <option value="amount_desc">Дорогие сначала</option>
+            <option value="amount_asc">Дешёвые сначала</option>
+          </select>
         </div>
       </div>
+
+      <div id="expensesEmpty" class="empty-state">Пока нет расходов</div>
+      <ul id="expensesList" class="expenses-list"></ul>
     </section>
 
-    <!-- Export Buttons -->
-    <section id="exportSection" class="export-section hidden">
-      <h3>📤 Экспорт и Синхронизация</h3>
-      <div class="export-buttons">
-        <button id="exportQR" class="btn btn-outline">📱 QR-код</button>
-        <button id="exportJSON" class="btn btn-outline">📋 JSON</button>
-        <button id="importJSON" class="btn btn-outline">📥 Импорт</button>
-        <button id="exportPDF" class="btn btn-outline">📕 PDF</button>
+    <!-- Аналитика -->
+    <section class="card">
+      <h2>Аналитика</h2>
+      <div class="analytics-grid">
+        <div class="stat">
+          <span class="stat-label">Всего</span>
+          <span id="statTotal" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">В день</span>
+          <span id="statPerDay" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Кол-во расходов</span>
+          <span id="statCount" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Топ категория</span>
+          <span id="statTopCategory" class="stat-value">—</span>
+        </div>
       </div>
-      <input type="file" id="importFile" accept=".json" style="display:none" />
+      <p class="hint">Все суммы считаются в валюте поездки.</p>
     </section>
 
-    <!-- P2P Sync Section -->
-    <section id="p2pSync" class="p2p-sync hidden">
-      <h3>🔄 P2P Синхронизация</h3>
-      <div class="sync-options">
-        <button id="createRoom" class="btn btn-primary">🏠 Создать комнату</button>
-        <button id="joinRoom" class="btn btn-outline">🚪 Войти в комнату</button>
+    <!-- Экспорт / импорт -->
+    <section class="card">
+      <h2>Экспорт и импорт</h2>
+      <div class="export-row">
+        <button id="exportJsonBtn" class="secondary">📋 Экспорт JSON</button>
+        <button id="importJsonBtn" class="secondary">📥 Импорт JSON</button>
+        <input id="importFileInput" type="file" accept="application/json" hidden />
       </div>
-      <div id="roomInfo" class="room-info hidden">
-        <p>Код комнаты: <strong id="roomCode"></strong></p>
-        <p>Поделитесь кодом с другим устройством</p>
-        <div id="qrRoom"></div>
-        <button id="leaveRoom" class="btn btn-sm">❌ Выйти</button>
-      </div>
-      <div id="peerStatus" class="peer-status"></div>
+      <textarea id="exportArea" class="export-area" readonly placeholder="Здесь появятся данные для экспорта"></textarea>
     </section>
-
   </main>
 
-  <!-- Floating Action Button -->
-  <button id="addExpenseFab" class="fab hidden">➕</button>
-  <!-- Voice Trigger -->
-  <button id="voiceTrigger" class="voice-trigger" title="Нажми и скажи: бензин 2500 рублей">🎤</button>
+  <footer class="app-footer">
+    <span>TravelCar • Локальное хранение • Работает офлайн</span>
+    <span id="versionLabel"></span>
+  </footer>
 
-  <!-- Toast Container -->
-  <div id="toastContainer"></div>
-
-  <!-- Modals -->
-  <div id="modalContainer"></div>
-
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  
   <script src="app.js"></script>
-  
-  <!-- Register Service Worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('✅ SW registered:', reg.scope))
-          .catch(err => console.log('❌ SW failed:', err));
-      });
-    }
-  </script>
 </body>
 </html>

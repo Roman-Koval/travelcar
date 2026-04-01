@@ -1,7 +1,7 @@
 {
-  "name": "TravelCar",
+  "name": "TravelCar - Учёт расходов",
   "short_name": "TravelCar",
-  "description": "Учет расходов в путешествиях",
+  "description": "Учёт расходов в путешествиях с голосовым вводом",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -11,13 +11,16 @@
     {
       "src": "https://via.placeholder.com/192/22c55e/ffffff?text=🚗",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://via.placeholder.com/512/22c55e/ffffff?text=🚗",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
+  "categories": ["finance", "travel", "productivity"],
   "lang": "ru-RU"
 }

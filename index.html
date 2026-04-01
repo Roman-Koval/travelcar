@@ -6,7 +6,7 @@
 <title>TravelCar</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#0f172a;color:#fff;padding:15px}
+body{font-family:-apple-system,sans-serif;background:#0f172a;color:#fff;padding:15px;padding-bottom:100px}
 h1{margin-bottom:15px;font-size:1.3rem}
 button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:12px;font-size:1.1rem;cursor:pointer}
 .green{background:#22c55e;color:#fff}
@@ -20,10 +20,21 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 .auto{background:#1e3a5f;padding:12px;border-radius:10px;margin:10px 0;text-align:center;font-size:0.95rem}
 .auto.on{background:#166534}
 .loc{color:#94a3b8;font-size:0.9rem;margin:5px 0}
-.loc.clickable{color:#60a5fa;cursor:pointer}
 .cat{font-size:0.85rem;color:#666;margin:5px 0}
 .amount-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .eur-amount{color:#22c55e;font-weight:bold;font-size:1.1rem}
+
+/* Modal styles */
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;z-index:10000;padding:20px}
+.modal.show{display:flex}
+.modal-content{background:#1e293b;border-radius:16px;padding:25px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:1.3rem;font-weight:bold}
+.close-btn{background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;padding:0;width:40px}
+.detail-row{margin:15px 0;padding:12px;background:#0f172a;border-radius:8px}
+.detail-label{color:#94a3b8;font-size:0.85rem;margin-bottom:5px}
+.detail-value{font-size:1.1rem;font-weight:500}
+.map-btn{margin-top:15px;background:#3b82f6}
 </style>
 </head>
 <body>
@@ -37,17 +48,18 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 
 <label>💰 Сумма</label>
 <input type="number" id="amt" placeholder="0" step="0.01">
-
 <label>Валюта</label>
 <select id="cur">
   <option value="EUR">€ EUR (Евро)</option>
   <option value="USD">$ USD (Доллар)</option>
   <option value="GBP">£ GBP (Фунт)</option>
   <option value="TRY">₺ TRY (Лиры)</option>
+  <option value="GEL">₾ GEL (Лари)</option>
   <option value="CHF">₣ CHF (Франк)</option>
   <option value="PLN">zł PLN (Злотые)</option>
   <option value="CZK">Kč CZK (Кроны)</option>
-  <option value="HUF">Ft HUF (Форинты)</option>  <option value="RON">lei RON (Леи)</option>
+  <option value="HUF">Ft HUF (Форинты)</option>
+  <option value="RON">lei RON (Леи)</option>
   <option value="BGN">лв BGN (Левы)</option>
   <option value="RSD">дин RSD (Динары)</option>
 </select>
@@ -74,35 +86,44 @@ input,select{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px s
 <div id="map"></div>
 <div id="toast"></div>
 
+<!-- Modal -->
+<div id="modal" class="modal" onclick="closeModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">💰 Детали расхода</div>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="modalBody"></div>
+    <button class="blue map-btn" onclick="openMapFromModal()">🗺️ Открыть на карте</button>
+  </div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <script>
-let data = [], map, marks = [], lat, lng;
+let data = [], map, marks = [], lat, lng, currentModalItem = null;
 
 // Курсы валют к EUR (1 единица = X EUR)
 const EUR_RATES = {
-  EUR: 1.00,      // Евро
-  USD: 0.92,      // Доллар США
-  GBP: 1.17,      // Фунт стерлингов (Великобритания)
-  TRY: 0.029,     // Турецкая лира (Турция, Сев. Кипр)
-  CHF: 1.05,      // Швейцарский франк (Швейцария)
-  PLN: 0.23,      // Польский злотый (Польша)
-  CZK: 0.041,     // Чешская крона (Чехия)
-  HUF: 0.0026,    // Венгерский форинт (Венгрия)
-  RON: 0.20,      // Румынский лей (Румыния)
-  BGN: 0.51,      // Болгарский лев (Болгария)
-  RSD: 0.0085     // Сербский динар (Сербия)
+  EUR: 1.00, USD: 0.92, GBP: 1.17, TRY: 0.029, GEL: 0.34,
+  CHF: 1.05, PLN: 0.23, CZK: 0.041, HUF: 0.0026,
+  RON: 0.20, BGN: 0.51, RSD: 0.0085
 };
 
 const CUR_SYMBOLS = {
-  EUR: '€', USD: '$', GBP: '£', TRY: '₺',  CHF: '₣', PLN: 'zł', CZK: 'Kč', HUF: 'Ft',
+  EUR: '€', USD: '$', GBP: '£', TRY: '₺', GEL: '₾',
+  CHF: '₣', PLN: 'zł', CZK: 'Kč', HUF: 'Ft',
   RON: 'lei', BGN: 'лв', RSD: 'дин'
 };
 
 const CAT_ICONS = {
   food: '🍔', fuel: '⛽', hotel: '🏨',
   transport: '🚗', shopping: '🛍️', other: '📦'
+};
+
+const CAT_NAMES = {
+  food: 'Еда', fuel: 'Топливо', hotel: 'Жильё',
+  transport: 'Транспорт', shopping: 'Покупки', other: 'Прочее'
 };
 
 window.onload = function() {
@@ -124,50 +145,39 @@ function speak() {
   
   txt.textContent = '🔴 Слушаю...';
   status.textContent = '🎤 Говорите сейчас...';
-  status.className = 'auto';
-  
+  status.className = 'auto';  
   r.onresult = async function(e) {
     const t = e.results[0][0].transcript;
     txt.textContent = '"' + t + '"';
     status.textContent = '✅ Распознано: "' + t + '"';
     status.className = 'auto on';
     
-    // Parse amount
     const m = t.toLowerCase().match(/(\d+[.,]?\d*)/);
     const amt = m ? parseFloat(m[1].replace(',', '.')) : 0;
     
-    // Parse currency - ALL CURRENCIES
+    // Parse currency - ALL CURRENCIES including GEL
     let cur = 'EUR';
     const lower = t.toLowerCase();
     
-    if (/лир|try/i.test(lower)) cur = 'TRY';
+    if (/лари|gel/i.test(lower)) cur = 'GEL';
+    else if (/лир|try/i.test(lower)) cur = 'TRY';
     else if (/дол|usd|\$/i.test(lower)) cur = 'USD';
     else if (/фун|gbp|£/i.test(lower)) cur = 'GBP';
     else if (/злот|pln|польск/i.test(lower)) cur = 'PLN';
     else if (/крон|czk|чешск/i.test(lower)) cur = 'CZK';
-    else if (/форинт|huf|венгр/i.test(lower)) cur = 'HUF';    else if (/лей|ron|румын/i.test(lower)) cur = 'RON';
+    else if (/форинт|huf|венгр/i.test(lower)) cur = 'HUF';
+    else if (/лей|ron|румын/i.test(lower)) cur = 'RON';
     else if (/лев|bgn|болгар/i.test(lower)) cur = 'BGN';
     else if (/динар|rsd|серб/i.test(lower)) cur = 'RSD';
     else if (/франк|chf|швейц/i.test(lower)) cur = 'CHF';
     
-    // Parse category - IMPROVED
+    // Parse category
     let cat = 'food';
-    
-    if (/заправ|бензин|топливо|газ|fuel|petrol|oil/i.test(lower)) {
-      cat = 'fuel';
-    }
-    else if (/отель|гостиниц|жильё|ночлег|hotel|accommodation|апартамент/i.test(lower)) {
-      cat = 'hotel';
-    }
-    else if (/транспорт|метро|автобус|такси|taxi|metro|bus|билет|поезд|train/i.test(lower)) {
-      cat = 'transport';
-    }
-    else if (/покупк|шопинг|магазин|shopping|buy|сувенир/i.test(lower)) {
-      cat = 'shopping';
-    }
-    else if (/еда|обед|ужин|завтрак|кафе|ресторан|пицца|кофе|чай|burger|food|eat|pizza/i.test(lower)) {
-      cat = 'food';
-    }
+    if (/заправ|бензин|топливо|газ|fuel|petrol|oil/i.test(lower)) cat = 'fuel';
+    else if (/отель|гостиниц|жильё|ночлег|hotel|accommodation|апартамент/i.test(lower)) cat = 'hotel';
+    else if (/транспорт|метро|автобус|такси|taxi|metro|bus|билет|поезд|train/i.test(lower)) cat = 'transport';
+    else if (/покупк|шопинг|магазин|shopping|buy|сувенир/i.test(lower)) cat = 'shopping';
+    else if (/еда|обед|ужин|завтрак|кафе|ресторан|пицца|кофе|чай|burger|food|eat|pizza/i.test(lower)) cat = 'food';
     
     document.getElementById('amt').value = amt;
     document.getElementById('cur').value = cur;
@@ -175,7 +185,6 @@ function speak() {
     
     status.textContent = '📍 ' + CAT_ICONS[cat] + ' ' + amt + ' ' + cur + ' - Город...';
     
-    // Get location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async function(p) {
         lat = p.coords.latitude;
@@ -184,18 +193,14 @@ function speak() {
         try {
           const res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&addressdetails=1&accept-language=ru');
           const d = await res.json();
-          
           let placeName = d.address?.city || d.address?.town || d.address?.village || d.address?.municipality || d.address?.county || '';
-          
-          document.getElementById('loc').value = placeName || (lat.toFixed(4) + ', ' + lng.toFixed(4));
-        } catch(e) {
-          console.warn('Geo error:', e);
+          document.getElementById('loc').value = placeName || (lat.toFixed(4) + ', ' + lng.toFixed(4));        } catch(e) {
           document.getElementById('loc').value = lat.toFixed(4) + ', ' + lng.toFixed(4);
         }
         
         status.textContent = '💾 Сохранение...';
-        setTimeout(autoSave, 1000);      }, function(err) {
-        console.warn('GPS error:', err);
+        setTimeout(autoSave, 1000);
+      }, function(err) {
         document.getElementById('loc').value = 'GPS off';
         setTimeout(autoSave, 1000);
       }, { timeout: 10000, enableHighAccuracy: true });
@@ -206,7 +211,6 @@ function speak() {
   };
   
   r.onerror = function(e) {
-    console.error('Voice error:', e.error);
     document.getElementById('txt').textContent = 'Ошибка: ' + e.error;
     setTimeout(resetStatus, 2000);
   };
@@ -216,16 +220,12 @@ function speak() {
   };
   
   try { r.start(); }
-  catch(e) { console.error(e); alert('Ошибка запуска'); resetStatus(); }
+  catch(e) { alert('Ошибка запуска'); resetStatus(); }
 }
 
 function autoSave() {
   const amt = parseFloat(document.getElementById('amt').value);
-  if (!amt || amt <= 0) {
-    show('❌ Не распознана сумма');
-    resetStatus();
-    return;
-  }
+  if (!amt || amt <= 0) { show('❌ Не распознана сумма'); resetStatus(); return; }
   
   const cur = document.getElementById('cur').value;
   const cat = document.getElementById('cat').value;
@@ -275,6 +275,56 @@ function clr() {
   render();
 }
 
+// Open modal with details
+function showDetails(id) {
+  const item = data.find(x => x.id === id);
+  if (!item) return;
+  
+  currentModalItem = item;
+  const date = new Date(item.date).toLocaleString('ru-RU');
+  
+  const html = `
+    <div class="detail-row">
+      <div class="detail-label">💰 Сумма</div>
+      <div class="detail-value" style="font-size:1.5rem;color:#22c55e">${CUR_SYMBOLS[item.cur]}${item.amt} ${item.cur} = €${item.eur.toFixed(2)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">📂 Категория</div>
+      <div class="detail-value">${CAT_ICONS[item.cat]} ${CAT_NAMES[item.cat]}</div>
+    </div>
+    <div class="detail-row">      <div class="detail-label">📍 Местоположение</div>
+      <div class="detail-value">${item.loc || 'Не определено'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">🕐 Дата и время</div>
+      <div class="detail-value" style="font-size:0.95rem">${date}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">🌍 Координаты</div>
+      <div class="detail-value" style="font-size:0.9rem">${item.lat?.toFixed(6) || 'N/A'}, ${item.lng?.toFixed(6) || 'N/A'}</div>
+    </div>
+  `;
+  
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal(e) {
+  if (!e || e.target.id === 'modal') {
+    document.getElementById('modal').classList.remove('show');
+    currentModalItem = null;
+  }
+}
+
+function openMapFromModal() {
+  if (currentModalItem && currentModalItem.lat && currentModalItem.lng) {
+    const url = 'https://www.google.com/maps/place/' + currentModalItem.lat + ',' + currentModalItem.lng + '/@' + currentModalItem.lat + ',' + currentModalItem.lng + ',17z';
+    window.open(url, '_blank');
+  } else {
+    show('📍 Нет координат');
+  }
+}
+
 function openMap(latitude, longitude) {
   if (!latitude || !longitude) { show('📍 Нет координат'); return; }
   window.open('https://www.google.com/maps/place/' + latitude + ',' + longitude + '/@' + latitude + ',' + longitude + ',17z', '_blank');
@@ -291,25 +341,19 @@ function render() {
   marks = [];
   let total = 0;
   
-  if (data.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small>Нажми 🎤 ГОВОРИ</small></div>';  } else {
+  if (data.length === 0) {    list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small>Нажми 🎤 ГОВОРИ</small></div>';
+  } else {
     data.forEach(function(x) {
       total += x.eur || 0;
       const div = document.createElement('div');
       div.className = 'item';
-      div.onclick = function() { openMap(x.lat, x.lng); };
+      div.onclick = function() { showDetails(x.id); };
       
-      let locHtml = '';
-      if (x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' && x.loc !== 'No GPS') {
-        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ')">📍 ' + x.loc + '</div>';
-      } else if (x.lat && x.lng) {
-        locHtml = '<div class="loc clickable" onclick="event.stopPropagation();openMap(' + x.lat + ',' + x.lng + ')">📍 ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4) + '</div>';
-      }
+      let locHtml = x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' ? '<div class="loc">📍 ' + x.loc + '</div>' : '';
       
       div.innerHTML = '<div class="amount-row"><b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span></div>' +
         locHtml +
-        '<div class="cat">' + CAT_ICONS[x.cat] + ' ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>' +
-        '<button class="red" onclick="event.stopPropagation();del(' + x.id + ')" style="padding:10px;margin-top:10px">🗑️ Удалить</button>';
+        '<div class="cat">' + CAT_ICONS[x.cat] + ' ' + CAT_NAMES[x.cat] + ' • ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>';
       
       list.appendChild(div);
       
@@ -341,12 +385,12 @@ function resetStatus() {
   s.className = 'auto';
 }
 
-function show(msg) {  const t = document.getElementById('toast');
+function show(msg) {
+  const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.display = 'block';
   setTimeout(function() { t.style.display = 'none'; }, 3000);
-}
-</script>
+}</script>
 
 </body>
 </html>

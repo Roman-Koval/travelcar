@@ -1,461 +1,131 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TravelCar</title>
-<meta name="description" content="Учёт расходов в путешествиях">
-<meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TravelCar">
-<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travel Expenses</title>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#0f172a;color:#fff;padding:15px;padding-bottom:100px}
-h1{margin-bottom:15px;font-size:1.3rem;text-align:center}
-button{padding:12px;margin:5px 0;border:none;border-radius:10px;font-size:1rem;cursor:pointer}
-.green{background:#22c55e;color:#fff}
-.blue{background:#3b82f6;color:#fff}
-.red{background:#ef4444;color:#fff}
-.purple{background:#a855f7;color:#fff}
-input,select{width:100%;padding:10px;margin:0;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#fff;font-size:0.95rem}
-.item{background:#1e293b;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #22c55e;cursor:pointer}
-.item:hover{border-left-color:#3b82f6}
-#map{height:250px;border-radius:12px;background:#1e293b;margin:15px 0}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 24px;border-radius:30px;display:none;z-index:9999}
-.voice-btn{width:100%;padding:20px;margin:15px 0;background:linear-gradient(135deg,#3b82f6,#22c55e);border:none;border-radius:50px;color:#fff;font-size:1.2rem;font-weight:bold;cursor:pointer;text-align:center}
-.voice-btn.recording{animation:pulse 1.5s infinite;background:linear-gradient(135deg,#ef4444,#dc2626)}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
-.trip-selector{background:#1e293b;padding:12px;border-radius:10px;margin:10px 0}
-.trip-item{padding:10px;margin:5px 0;background:#0f172a;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-.trip-item.active{border-left:3px solid #22c55e;background:#166534}
-.form-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin:10px 0}
-.btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:15px 0;position:fixed;bottom:0;left:0;right:0;padding:15px;background:#0f172a;border-top:1px solid #334155}
-.btn-small{padding:12px;font-size:0.95rem}
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;z-index:10000;padding:20px}
-.modal.show{display:flex}
-.modal-content{background:#1e293b;border-radius:16px;padding:25px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.modal-title{font-size:1.3rem;font-weight:bold}
-.close-btn{background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;padding:0;width:40px}
-.detail-row{margin:15px 0;padding:12px;background:#0f172a;border-radius:8px}
-.detail-label{color:#94a3b8;font-size:0.85rem;margin-bottom:5px}
-.detail-value{font-size:1.1rem;font-weight:500}
-.map-btn{margin-top:15px;background:#3b82f6}
-.export-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
-#txt{text-align:center;color:#94a3b8;margin:10px 0;min-height:20px;font-size:0.95rem}
-.loc{color:#94a3b8;font-size:0.9rem;margin:5px 0}
-.cat{font-size:0.85rem;color:#666;margin:5px 0}
-.amount-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}.eur-amount{color:#22c55e;font-weight:bold;font-size:1.1rem}
+body { font-family: Arial; padding: 10px; }
+button { margin: 5px; }
+.card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 10px;
+}
 </style>
 </head>
+
 <body>
 
-<h1>🚗 TravelCar</h1>
+<h2>Travel Expenses</h2>
 
-<div class="trip-selector">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div onclick="toggleTripList()" style="flex:1;cursor:pointer;padding:10px;background:#0f172a;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:bold">📂 <span id="currentTripName">Поездка</span></span>
-      <span style="color:#94a3b8">▼</span>
-    </div>
-    <button onclick="showNewTripModal()" style="width:auto;padding:8px 12px;margin-left:10px;font-size:0.85rem;background:#a855f7">+ Новая</button>
-  </div>
-  <div id="tripList" style="display:none;margin-top:10px"></div>
-</div>
+<input id="name" placeholder="Название">
+<input id="amount" type="number" placeholder="Сумма">
+<button onclick="add()">Add</button>
 
-<button class="voice-btn" id="voiceBtn" onclick="speak()">🎤 Говори свои расходы</button>
-<div id="txt"></div>
+<br>
 
-<div class="form-row">
-  <div><input type="number" id="amt" placeholder="💰 Сумма" step="0.01"></div>
-  <div><select id="cur"><option value="EUR">€ EUR</option><option value="USD">$ USD</option><option value="GBP">£ GBP</option><option value="TRY">₺ TRY</option><option value="GEL">₾ GEL</option><option value="CHF">₣ CHF</option><option value="PLN">zł PLN</option><option value="CZK">Kč CZK</option><option value="HUF">Ft HUF</option><option value="RON">lei RON</option><option value="BGN">лв BGN</option><option value="RSD">дин RSD</option></select></div>
-  <div><select id="cat"><option value="food">🍔 Еда</option><option value="fuel">⛽ Топливо</option><option value="hotel">🏨 Жильё</option><option value="transport">🚗 Транспорт</option><option value="shopping">🛍️ Покупки</option><option value="other">📦 Прочее</option></select></div>
-  <div><input type="text" id="loc" placeholder="📍 Город" readonly></div>
-</div>
+<button onclick="exportData()">Export</button>
+<button onclick="document.getElementById('fileInput').click()">Import</button>
+<input type="file" id="fileInput" style="display:none">
 
-<div id="map"></div>
-<div id="tot" style="text-align:center;font-size:1.5rem;margin:15px 0;color:#22c55e;font-weight:bold">€0.00</div>
-<div id="list" style="margin-top:10px"></div>
-
-<div class="btn-row">
-  <button class="green btn-small" onclick="manualSave()">💾 Сохранить</button>
-  <button class="purple btn-small" onclick="showExportModal()">📤 Экспорт</button>
-  <button class="red btn-small" onclick="clr()">🗑️ Очистить</button>
-</div>
-
-<div id="toast"></div>
-
-<div id="modal" class="modal" onclick="closeModal(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-header"><div class="modal-title">💰 Детали расхода</div><button class="close-btn" onclick="closeModal()">&times;</button></div>
-    <div id="modalBody"></div>
-    <button class="blue map-btn" onclick="openMapFromModal()">🗺️ Открыть на карте</button>
-  </div>
-</div>
-
-<div id="newTripModal" class="modal" onclick="closeNewTripModal(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">    <div class="modal-header"><div class="modal-title">🗺️ Новая поездка</div><button class="close-btn" onclick="closeNewTripModal()">&times;</button></div>
-    <label>Название поездки</label>
-    <input type="text" id="newTripName" placeholder="Например: Ирландия 2026">
-    <button class="green" onclick="createNewTrip()" style="margin-top:15px">✅ Создать</button>
-  </div>
-</div>
-
-<div id="exportModal" class="modal" onclick="closeExportModal(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-header"><div class="modal-title">📤 Экспорт данных</div><button class="close-btn" onclick="closeExportModal()">&times;</button></div>
-    <div style="margin:15px 0">
-      <div class="detail-label">Текущая поездка: <b id="exportTripName">-</b></div>
-      <div class="detail-label">Записей: <b id="exportCount">0</b></div>
-      <div class="detail-label">Сумма: <b id="exportTotal" style="color:#22c55e">€0.00</b></div>
-    </div>
-    <div class="export-btns">
-      <button class="blue" onclick="exportData('json')">📄 JSON</button>
-      <button class="green" onclick="exportData('csv')">📊 CSV</button>
-      <button class="purple" onclick="exportData('txt')">📝 TXT</button>
-      <button class="red" onclick="shareData()">📱 Поделиться</button>
-    </div>
-  </div>
-</div>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="list"></div>
 
 <script>
-let trips = {}, currentTripId = null, map, marks = [], lat, lng, currentModalItem = null;
-const geoCache = new Map();
-const EUR_RATES = {EUR:1,USD:0.92,GBP:1.17,TRY:0.029,GEL:0.34,CHF:1.05,PLN:0.23,CZK:0.041,HUF:0.0026,RON:0.20,BGN:0.51,RSD:0.0085};
-const CUR_SYMBOLS = {EUR:'€',USD:'$',GBP:'£',TRY:'₺',GEL:'₾',CHF:'₣',PLN:'zł',CZK:'Kč',HUF:'Ft',RON:'lei',BGN:'лв',RSD:'дин'};
-const CAT_ICONS = {food:'🍔',fuel:'⛽',hotel:'🏨',transport:'🚗',shopping:'🛍️',other:'📦'};
-const CAT_NAMES = {food:'Еда',fuel:'Топливо',hotel:'Жильё',transport:'Транспорт',shopping:'Покупки',other:'Прочее'};
+let data = JSON.parse(localStorage.getItem('data') || '[]')
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').then(reg => console.log('✅ SW:', reg)).catch(err => console.log('❌ SW:', err));
+function save() {
+  localStorage.setItem('data', JSON.stringify(data))
+  render()
 }
 
-window.onload = function() {
-  loadTrips();
-  map = L.map('map').setView([50, 10], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  render();
-};
+function add() {
+  const name = document.getElementById('name').value
+  const amount = document.getElementById('amount').value
 
-function toggleTripList() {
-  const list = document.getElementById('tripList');
-  list.style.display = list.style.display === 'none' ? 'block' : 'none';
-}
-function loadTrips() {
-  const saved = localStorage.getItem('tc_trips');
-  if (saved) {
-    trips = JSON.parse(saved);
-    const current = localStorage.getItem('tc_current_trip');
-    if (current && trips[current]) currentTripId = current;
-    else createTrip('Поездка ' + new Date().toLocaleDateString('ru-RU'));
-  } else createTrip('Поездка ' + new Date().toLocaleDateString('ru-RU'));
-  renderTripList();
+  if (!name || !amount) return
+
+  data.push({
+    id: Date.now(),
+    name,
+    amount
+  })
+
+  save()
 }
 
-function createTrip(name) {
-  const id = 'trip_' + Date.now();
-  trips[id] = {id, name, expenses:[], created:new Date().toISOString()};
-  currentTripId = id;
-  saveTrips();
-  return id;
+function remove(id) {
+  data = data.filter(i => i.id !== id)
+  save()
 }
 
-function createNewTrip() {
-  const name = document.getElementById('newTripName').value.trim();
-  if (!name) { show('❌ Введите название'); return; }
-  createTrip(name);
-  closeNewTripModal();
-  render();
-  show('✅ Поездка создана');
-}
+function edit(id) {
+  const item = data.find(i => i.id === id)
 
-function switchTrip(id) {
-  currentTripId = id;
-  localStorage.setItem('tc_current_trip', id);
-  renderTripList();
-  render();
-  toggleTripList();
-}
+  const newName = prompt('Название', item.name)
+  const newAmount = prompt('Сумма', item.amount)
 
-function saveTrips() {
-  localStorage.setItem('tc_trips', JSON.stringify(trips));
-  localStorage.setItem('tc_current_trip', currentTripId);
-}
-
-function renderTripList() {
-  const list = document.getElementById('tripList');
-  const currentName = document.getElementById('currentTripName');
-  list.innerHTML = '';
-  const trip = trips[currentTripId];
-  if (trip) {
-    currentName.textContent = trip.name;
-    Object.values(trips).forEach(t => {      const div = document.createElement('div');
-      div.className = 'trip-item' + (t.id === currentTripId ? ' active' : '');
-      const tCount = t.expenses.length;
-      const tTotal = t.expenses.reduce((sum, e) => sum + (e.eur || 0), 0).toFixed(2);
-      div.innerHTML = `<div><div style="font-weight:500">${t.name}</div><div style="font-size:0.8rem;color:#94a3b8">${tCount} записей • €${tTotal}</div></div>${t.id === currentTripId ? '<span style="background:#22c55e;color:#0f172a;padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:bold">✓</span>' : ''}`;
-      div.onclick = () => switchTrip(t.id);
-      list.appendChild(div);
-    });
+  if (newName !== null && newAmount !== null) {
+    item.name = newName
+    item.amount = newAmount
+    save()
   }
 }
-
-function showNewTripModal() { document.getElementById('newTripName').value = ''; document.getElementById('newTripModal').classList.add('show'); }
-function closeNewTripModal(e) { if (!e || e.target.id === 'newTripModal') document.getElementById('newTripModal').classList.remove('show'); }
-
-function speak() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert('Используйте Google Chrome'); return; }
-  const r = new SR();
-  r.lang = 'ru-RU';
-  const txt = document.getElementById('txt');
-  const btn = document.getElementById('voiceBtn');
-  
-  btn.classList.add('recording');
-  btn.innerHTML = '🎙️ Слушаю...';
-  
-  r.onresult = async function(e) {
-    const t = e.results[0][0].transcript;
-    txt.textContent = '"' + t + '"';
-    btn.classList.remove('recording');
-    btn.innerHTML = '🎤 Говори свои расходы';
-    
-    const m = t.toLowerCase().match(/(\d+[.,]?\d*)/);
-    const amt = m ? parseFloat(m[1].replace(',', '.')) : 0;
-    let cur = 'EUR';
-    const lower = t.toLowerCase();
-    if (/лари|gel/i.test(lower)) cur = 'GEL';
-    else if (/лир|try/i.test(lower)) cur = 'TRY';
-    else if (/дол|usd|\$/i.test(lower)) cur = 'USD';
-    else if (/фун|gbp|£/i.test(lower)) cur = 'GBP';
-    else if (/злот|pln|польск/i.test(lower)) cur = 'PLN';
-    else if (/крон|czk|чешск/i.test(lower)) cur = 'CZK';
-    else if (/форинт|huf|венгр/i.test(lower)) cur = 'HUF';
-    else if (/лей|ron|румын/i.test(lower)) cur = 'RON';
-    else if (/лев|bgn|болгар/i.test(lower)) cur = 'BGN';
-    else if (/динар|rsd|серб/i.test(lower)) cur = 'RSD';
-    else if (/франк|chf|швейц/i.test(lower)) cur = 'CHF';
-    
-    let cat = 'food';
-    if (/заправ|бензин|топливо|газ|fuel|petrol|oil/i.test(lower)) cat = 'fuel';
-    else if (/отель|гостиниц|жильё|ночлег|hotel/i.test(lower)) cat = 'hotel';    else if (/транспорт|метро|автобус|такси|taxi|metro/i.test(lower)) cat = 'transport';
-    else if (/покупк|шопинг|магазин|shopping/i.test(lower)) cat = 'shopping';
-    else if (/еда|обед|ужин|завтрак|кафе|ресторан|пицца|кофе|food|eat/i.test(lower)) cat = 'food';
-    
-    document.getElementById('amt').value = amt;
-    document.getElementById('cur').value = cur;
-    document.getElementById('cat').value = cat;
-    
-    // Get location with IMPROVED geocoding
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async function(p) {
-        lat = p.coords.latitude; lng = p.coords.longitude;
-        const cacheKey = lat.toFixed(3) + ',' + lng.toFixed(3);
-        
-        // Check cache
-        if (geoCache.has(cacheKey)) {
-          document.getElementById('loc').value = geoCache.get(cacheKey);
-          setTimeout(() => autoSave(amt), 500);
-          return;
-        }
-        
-        try {
-          const res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&addressdetails=1&zoom=18&accept-language=ru');
-          const d = await res.json();
-          
-          // Try multiple levels for small settlements
-          let placeName = d.address?.city || 
-                         d.address?.town || 
-                         d.address?.village || 
-                         d.address?.hamlet || 
-                         d.address?.suburb || 
-                         d.address?.neighbourhood || 
-                         d.address?.municipality || 
-                         d.address?.county || 
-                         d.name || 
-                         '';
-          
-          // Fallback to road if no settlement
-          if (!placeName && d.address?.road) {
-            placeName = d.address.road + (d.address?.house_number ? ' ' + d.address.house_number : '');
-          }
-          
-          const finalName = placeName || (lat.toFixed(4) + ', ' + lng.toFixed(4));
-          document.getElementById('loc').value = finalName;
-          
-          // Cache the result
-          geoCache.set(cacheKey, finalName);
-        } catch(e) { 
-          const coords = lat.toFixed(4) + ', ' + lng.toFixed(4);
-          document.getElementById('loc').value = coords;          geoCache.set(cacheKey, coords);
-        }
-        setTimeout(() => autoSave(amt), 1000);
-      }, function() { 
-        document.getElementById('loc').value = 'GPS off'; 
-        setTimeout(() => autoSave(amt), 1000); 
-      }, { timeout: 15000, enableHighAccuracy: true, maximumAge: 30000 });
-    } else { setTimeout(() => autoSave(amt), 1000); }
-  };
-  
-  r.onerror = function(e) { 
-    txt.textContent = 'Ошибка: ' + e.error; 
-    btn.classList.remove('recording');
-    btn.innerHTML = '🎤 Говори свои расходы';
-  };
-  
-  r.onend = function() { 
-    setTimeout(function() { 
-      btn.classList.remove('recording');
-      btn.innerHTML = '🎤 Говори свои расходы';
-      txt.textContent = '';
-    }, 2000);
-  };
-  
-  try { r.start(); } catch(e) { btn.classList.remove('recording'); btn.innerHTML = '🎤 Говори свои расходы'; }
-}
-
-function autoSave(amt) {
-  if (!amt || amt <= 0) { show('❌ Не распознана сумма'); return; }
-  saveExpense(amt);
-}
-
-function manualSave() {
-  const amt = parseFloat(document.getElementById('amt').value);
-  if (!amt || amt <= 0) { show('❌ Введите сумму'); return; }
-  
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(async function(p) {
-      lat = p.coords.latitude; lng = p.coords.longitude;
-      const cacheKey = lat.toFixed(3) + ',' + lng.toFixed(3);
-      
-      if (geoCache.has(cacheKey)) {
-        document.getElementById('loc').value = geoCache.get(cacheKey);
-        setTimeout(() => saveExpense(amt), 500);
-        return;
-      }
-      
-      try {
-        const res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&addressdetails=1&zoom=18&accept-language=ru');
-        const d = await res.json();        
-        let placeName = d.address?.city || d.address?.town || d.address?.village || 
-                       d.address?.hamlet || d.address?.suburb || d.address?.neighbourhood || 
-                       d.address?.municipality || d.address?.county || d.name || '';
-        
-        if (!placeName && d.address?.road) {
-          placeName = d.address.road + (d.address?.house_number ? ' ' + d.address.house_number : '');
-        }
-        
-        const finalName = placeName || (lat.toFixed(4) + ', ' + lng.toFixed(4));
-        document.getElementById('loc').value = finalName;
-        geoCache.set(cacheKey, finalName);
-      } catch(e) { 
-        const coords = lat.toFixed(4) + ', ' + lng.toFixed(4);
-        document.getElementById('loc').value = coords;
-        geoCache.set(cacheKey, coords);
-      }
-      setTimeout(() => saveExpense(amt), 500);
-    }, function() { setTimeout(() => saveExpense(amt), 500); }, { timeout: 15000, enableHighAccuracy: true, maximumAge: 30000 });
-  } else { setTimeout(() => saveExpense(amt), 500); }
-}
-
-function saveExpense(amt) {
-  const cur = document.getElementById('cur').value;
-  const cat = document.getElementById('cat').value;
-  const loc = document.getElementById('loc').value;
-  const eur = amt * (EUR_RATES[cur] || 1);
-  const expense = { id: Date.now(), amt, cur, cat, eur, loc, lat: lat || null, lng: lng || null, date: new Date().toISOString() };
-  trips[currentTripId].expenses.unshift(expense);
-  saveTrips();
-  document.getElementById('amt').value = '';
-  document.getElementById('loc').value = '';
-  show('✅ ' + CUR_SYMBOLS[cur] + amt + ' ' + cur + ' = €' + eur.toFixed(2));
-  render();
-}
-
-function del(id) { if (!confirm('Удалить?')) return; trips[currentTripId].expenses = trips[currentTripId].expenses.filter(x => x.id !== id); saveTrips(); render(); }
-function clr() { if (!confirm('Очистить ВСЁ?')) return; trips[currentTripId].expenses = []; saveTrips(); render(); }
-
-function showDetails(id) {
-  const item = trips[currentTripId].expenses.find(x => x.id === id);
-  if (!item) return;
-  currentModalItem = item;
-  const date = new Date(item.date).toLocaleString('ru-RU');
-  const html = `<div class="detail-row"><div class="detail-label">💰 Сумма</div><div class="detail-value" style="font-size:1.5rem;color:#22c55e">${CUR_SYMBOLS[item.cur]}${item.amt} ${item.cur} = €${item.eur.toFixed(2)}</div></div><div class="detail-row"><div class="detail-label">📂 Категория</div><div class="detail-value">${CAT_ICONS[item.cat]} ${CAT_NAMES[item.cat]}</div></div><div class="detail-row"><div class="detail-label">📍 Местоположение</div><div class="detail-value">${item.loc || 'Не определено'}</div></div><div class="detail-row"><div class="detail-label">🕐 Дата</div><div class="detail-value" style="font-size:0.95rem">${date}</div></div><div class="detail-row"><div class="detail-label">🌍 Координаты</div><div class="detail-value" style="font-size:0.9rem">${item.lat ? item.lat.toFixed(6) + ', ' + item.lng.toFixed(6) : 'N/A'}</div></div>`;
-  document.getElementById('modalBody').innerHTML = html;
-  document.getElementById('modal').classList.add('show');
-}
-
-function closeModal(e) { if (!e || e.target.id === 'modal') { document.getElementById('modal').classList.remove('show'); currentModalItem = null; } }function openMapFromModal() { if (currentModalItem && currentModalItem.lat && currentModalItem.lng) { window.open('https://www.google.com/maps/place/' + currentModalItem.lat + ',' + currentModalItem.lng + '/@' + currentModalItem.lat + ',' + currentModalItem.lng + ',17z', '_blank'); } else { show('📍 Нет координат'); } }
-
-function showExportModal() {
-  const trip = trips[currentTripId];
-  const total = trip.expenses.reduce((sum, e) => sum + (e.eur || 0), 0).toFixed(2);
-  document.getElementById('exportTripName').textContent = trip.name;
-  document.getElementById('exportCount').textContent = trip.expenses.length;
-  document.getElementById('exportTotal').textContent = '€' + total;
-  document.getElementById('exportModal').classList.add('show');
-}
-
-function closeExportModal(e) { if (!e || e.target.id === 'exportModal') document.getElementById('exportModal').classList.remove('show'); }
-
-function exportData(format) {
-  const trip = trips[currentTripId];
-  let content, mimeType, extension;
-  if (format === 'json') { content = JSON.stringify(trip.expenses, null, 2); mimeType = 'application/json'; extension = 'json'; }
-  else if (format === 'csv') { const headers = ['Date','Amount','Currency','EUR','Category','Location']; const rows = trip.expenses.map(e => [new Date(e.date).toISOString(), e.amt, e.cur, e.eur.toFixed(2), CAT_NAMES[e.cat], e.loc || '']); content = [headers.join(','), ...rows.map(r => r.join(','))].join('\n'); mimeType = 'text/csv'; extension = 'csv'; }
-  else { const total = trip.expenses.reduce((sum, e) => sum + (e.eur || 0), 0).toFixed(2); content = `TRAVELCAR\nTrip: ${trip.name}\nTotal: €${total}\n\n` + trip.expenses.map(e => `${new Date(e.date).toLocaleDateString('ru-RU')} - ${CUR_SYMBOLS[e.cur]}${e.amt} ${e.cur} (€${e.eur.toFixed(2)}) - ${CAT_NAMES[e.cat]}`).join('\n'); mimeType = 'text/plain'; extension = 'txt'; }
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${trip.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.${extension}`;
-  a.click();
-  URL.revokeObjectURL(url);
-  show('📥 Скачано: ' + extension.toUpperCase());
-}
-
-async function shareData() {
-  const trip = trips[currentTripId];
-  const total = trip.expenses.reduce((sum, e) => sum + (e.eur || 0), 0).toFixed(2);
-  let text = `🚗 ${trip.name}\n💰 Всего: €${total}\n📊 Записей: ${trip.expenses.length}\n\n`;
-  trip.expenses.slice(0, 10).forEach(e => { text += `${CUR_SYMBOLS[e.cur]}${e.amt} ${e.cur} = €${e.eur.toFixed(2)} - ${CAT_NAMES[e.cat]}\n`; });
-  if (trip.expenses.length > 10) text += `... и ещё ${trip.expenses.length - 10}\n`;
-  if (navigator.share) { try { await navigator.share({ title: trip.name, text: text }); show('📱 Отправлено'); } catch(e) { if (e.name !== 'AbortError') copyToClipboard(text); } }
-  else copyToClipboard(text);
-}
-
-function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => show('📋 Скопировано')).catch(() => show('❌ Ошибка')); }
 
 function render() {
-  const list = document.getElementById('list');
-  list.innerHTML = '';
-  marks.forEach(m => map.removeLayer(m));
-  marks = [];
-  const trip = trips[currentTripId];
-  let total = 0;
-  if (!trip || trip.expenses.length === 0) { list.innerHTML = '<div style="text-align:center;color:#666;padding:30px">📭 Нет записей<br><small>Нажми 🎤 и говори</small></div>'; }
-  else {    trip.expenses.forEach(function(x) {
-      total += x.eur || 0;
-      const div = document.createElement('div');
-      div.className = 'item';
-      div.onclick = function() { showDetails(x.id); };
-      let locHtml = x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' ? '<div class="loc">📍 ' + x.loc + '</div>' : '';
-      div.innerHTML = '<div class="amount-row"><b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span></div>' + locHtml + '<div class="cat">' + CAT_ICONS[x.cat] + ' ' + CAT_NAMES[x.cat] + ' • ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>';
-      list.appendChild(div);
-      if (x.lat && x.lng) { const m = L.marker([x.lat, x.lng]).addTo(map); m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2)); marks.push(m); }
-    });
-  }
-  document.getElementById('tot').textContent = '€' + total.toFixed(2);
-  if (marks.length > 0) map.fitBounds(L.latLngBounds(marks.map(m => m.getLatLng())).pad(0.1));
-  renderTripList();
+  const list = document.getElementById('list')
+  list.innerHTML = ''
+
+  data.forEach(item => {
+    const div = document.createElement('div')
+    div.className = 'card'
+
+    div.innerHTML = `
+      <b>${item.name}</b> - €${item.amount}
+      <br>
+      <button onclick="edit(${item.id})">✏️ Edit</button>
+      <button onclick="remove(${item.id})">❌ Delete</button>
+    `
+
+    list.appendChild(div)
+  })
 }
 
-function show(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(function() { t.style.display = 'none'; }, 3000); }
+function exportData() {
+  const blob = new Blob([JSON.stringify(data)], {type: 'application/json'})
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'expenses.json'
+  a.click()
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0]
+  const reader = new FileReader()
+
+  reader.onload = function(event) {
+    try {
+      const imported = JSON.parse(event.target.result)
+
+      if (!Array.isArray(imported)) {
+        alert('Invalid file')
+        return
+      }
+
+      data = imported
+      save()
+
+    } catch (err) {
+      alert('Error reading file')
+    }
+  }
+
+  reader.readAsText(file)
+})
+
+render()
 </script>
 
 </body>

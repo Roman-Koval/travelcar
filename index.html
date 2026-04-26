@@ -185,16 +185,25 @@ const CUR_SYMBOLS = {EUR:'€',USD:'$',GBP:'£',TRY:'₺',GEL:'₾',CHF:'₣',PL
 const CAT_ICONS = {food:'🍔',fuel:'⛽',hotel:'🏨',transport:'🚗',shopping:'🛍️',other:'📦'};
 const CAT_NAMES = {food:'Еда',fuel:'Топливо',hotel:'Жильё',transport:'Транспорт',shopping:'Покупки',other:'Прочее'};
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.protocol !== 'blob:' && location.hostname !== 'www.claudeusercontent.com') {
   navigator.serviceWorker.register('./sw.js').then(reg => console.log('✅ SW:', reg)).catch(err => console.log('❌ SW:', err));
 }
 
 window.onload = function() {
   loadTrips();
-  map = L.map('map').setView([50, 10], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  initMap();
   render();
 };
+
+function initMap() {
+  try {
+    map = L.map('map').setView([50, 10], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  } catch(e) {
+    document.getElementById('map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem">🗺️ Карта недоступна офлайн</div>';
+    map = null;
+  }
+}
 
 function toggleTripList() {
   const list = document.getElementById('tripList');
@@ -516,31 +525,49 @@ function importJSON(event) {
   reader.onload = function(e) {
     try {
       let data = JSON.parse(e.target.result);
-      // Accept both array of expenses and full trip object
+
+      // Normalize to array — support multiple export formats
       if (!Array.isArray(data)) {
-        // Maybe it's a full trip export { expenses: [...] }
-        if (data.expenses && Array.isArray(data.expenses)) data = data.expenses;
-        else { show('❌ Неверный формат файла'); return; }
+        if (data.expenses && Array.isArray(data.expenses)) data = data.expenses;      // TravelCar export
+        else if (data.entries && Array.isArray(data.entries)) data = data.entries;    // external app format
+        else { show('❌ Неверный формат файла'); event.target.value = ''; return; }
       }
-      // Validate entries and reassign ids to avoid collisions
+
       let added = 0;
       const now = Date.now();
       data.forEach((item, i) => {
-        if (typeof item.amt !== 'number' || !item.cur) return;
-        const expense = {
-          id: now + i,
-          amt: item.amt,
-          cur: item.cur,
-          cat: item.cat || 'other',
-          eur: item.eur || (item.amt * (EUR_RATES[item.cur] || 1)),
-          loc: item.loc || '',
-          lat: item.lat || null,
-          lng: item.lng || null,
-          date: item.date || new Date().toISOString()
-        };
-        trips[currentTripId].expenses.push(expense);
+        // Support TravelCar fields (amt/cur/loc/lng) AND external fields (origAmount/origCur/city/lon)
+        const amt  = item.amt        != null ? parseFloat(item.amt)        :
+                     item.origAmount != null ? parseFloat(item.origAmount) : null;
+        const cur  = item.cur  || item.origCur  || 'EUR';
+        const loc  = (item.loc || item.city || '').replace('Определение...', '').trim();
+        const lngV = item.lng  != null ? item.lng : item.lon != null ? item.lon : null;
+        const eur  = item.eur  != null ? parseFloat(item.eur) : (amt ? amt * (EUR_RATES[cur] || 1) : 0);
+        const cat  = item.cat  || 'other';
+
+        if (!amt || amt <= 0) return;
+
+        // Try to get a valid ISO date
+        let dateStr = new Date().toISOString();
+        if (item.date) {
+          const parsed = new Date(item.date);
+          if (!isNaN(parsed.getTime())) dateStr = parsed.toISOString();
+        }
+
+        trips[currentTripId].expenses.push({
+          id:   now + i,
+          amt,
+          cur,
+          cat,
+          eur,
+          loc,
+          lat:  item.lat  != null ? item.lat  : null,
+          lng:  lngV,
+          date: dateStr
+        });
         added++;
       });
+
       saveTrips();
       render();
       closeExportModal();
@@ -548,7 +575,6 @@ function importJSON(event) {
     } catch(err) {
       show('❌ Ошибка чтения файла');
     }
-    // Reset input so the same file can be re-imported if needed
     event.target.value = '';
   };
   reader.readAsText(file);
@@ -569,7 +595,7 @@ function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => 
 function render() {
   const list = document.getElementById('list');
   list.innerHTML = '';
-  marks.forEach(m => map.removeLayer(m));
+  if (map) marks.forEach(m => map.removeLayer(m));
   marks = [];
   const trip = trips[currentTripId];
   let total = 0;
@@ -583,11 +609,11 @@ function render() {
       let locHtml = x.loc && x.loc !== 'Unknown' && x.loc !== 'GPS off' ? '<div class="loc">📍 ' + x.loc + '</div>' : '';
       div.innerHTML = '<div class="amount-row"><b style="font-size:1.2rem">' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><span class="eur-amount">€' + (x.eur||0).toFixed(2) + '</span></div>' + locHtml + '<div class="cat">' + CAT_ICONS[x.cat] + ' ' + CAT_NAMES[x.cat] + ' • ' + new Date(x.date).toLocaleDateString('ru-RU') + '</div>';
       list.appendChild(div);
-      if (x.lat && x.lng) { const m = L.marker([x.lat, x.lng]).addTo(map); m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2)); marks.push(m); }
+      if (map && x.lat && x.lng) { const m = L.marker([x.lat, x.lng]).addTo(map); m.bindPopup('<b>' + CUR_SYMBOLS[x.cur] + x.amt + ' ' + x.cur + '</b><br>€' + (x.eur||0).toFixed(2)); marks.push(m); }
     });
   }
   document.getElementById('tot').textContent = '€' + total.toFixed(2);
-  if (marks.length > 0) map.fitBounds(L.latLngBounds(marks.map(m => m.getLatLng())).pad(0.1));
+  if (map && marks.length > 0) map.fitBounds(L.latLngBounds(marks.map(m => m.getLatLng())).pad(0.1));
   renderTripList();
 }
 
